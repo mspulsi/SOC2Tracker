@@ -87,6 +87,7 @@ const initialFormData: IntakeFormData = {
   targetCompletionDate: '',
   soc2Type: 'type1',
   trustServiceCriteria: ['security'],
+  wantsSprintPlan: true,
 };
 
 interface IntakeFormProps {
@@ -181,6 +182,7 @@ export default function IntakeForm({ onComplete }: IntakeFormProps) {
               targetCompletionDate: formData.targetCompletionDate,
               soc2Type: formData.soc2Type,
               trustServiceCriteria: formData.trustServiceCriteria,
+              wantsSprintPlan: formData.wantsSprintPlan,
             }}
             onChange={(goals) => setFormData({ ...formData, ...goals })}
           />

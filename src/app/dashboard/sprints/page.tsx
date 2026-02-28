@@ -1,0 +1,240 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import Link from 'next/link';
+import { useRoadmap } from '@/lib/use-roadmap';
+import { Sprint, Task } from '@/types/roadmap';
+
+type SprintOverrides = Record<string, number>; // taskId → sprintNumber
+
+const PRIORITY_BADGE: Record<string, string> = {
+  critical: 'bg-red-100 text-red-700',
+  high: 'bg-orange-100 text-orange-700',
+  medium: 'bg-yellow-100 text-yellow-700',
+  low: 'bg-gray-100 text-gray-600',
+};
+
+const CATEGORY_ICON: Record<Task['category'], string> = {
+  policy: '📄',
+  technical: '⚙️',
+  process: '🔄',
+  evidence: '📋',
+};
+
+function enableSprintPlan() {
+  const stored = localStorage.getItem('soc2-intake-data');
+  if (!stored) return;
+  const data = JSON.parse(stored);
+  data.wantsSprintPlan = true;
+  localStorage.setItem('soc2-intake-data', JSON.stringify(data));
+  window.location.reload();
+}
+
+export default function SprintsPage() {
+  const { intakeData, roadmap, loading, completedTasks, toggleTask } = useRoadmap();
+  const [overrides, setOverrides] = useState<SprintOverrides>({});
+
+  useEffect(() => {
+    const stored = localStorage.getItem('soc2-sprint-overrides');
+    if (stored) setOverrides(JSON.parse(stored));
+  }, []);
+
+  function moveTask(taskId: string, toSprint: number) {
+    const next = { ...overrides, [taskId]: toSprint };
+    setOverrides(next);
+    localStorage.setItem('soc2-sprint-overrides', JSON.stringify(next));
+  }
+
+  if (loading) {
+    return <div className="flex items-center justify-center h-96"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" /></div>;
+  }
+
+  if (!intakeData || !roadmap) {
+    return (
+      <div className="p-8 text-center text-gray-500">
+        No assessment found. <Link href="/intake" className="text-blue-600 underline">Start assessment</Link>
+      </div>
+    );
+  }
+
+  // User opted out of sprint planning
+  if (intakeData.wantsSprintPlan === false) {
+    return (
+      <div className="p-8">
+        <div className="mb-8">
+          <h1 className="text-2xl font-bold text-gray-900">Sprints</h1>
+        </div>
+        <div className="bg-white rounded-xl border border-gray-200 p-16 text-center max-w-lg mx-auto">
+          <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-5">
+            <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+          </div>
+          <h2 className="text-lg font-semibold text-gray-900 mb-2">No Sprint Plan</h2>
+          <p className="text-gray-500 text-sm mb-6">
+            You opted out of week-by-week sprint planning during setup. Enable it to see your tasks broken down into 2-week sprints with scheduling.
+          </p>
+          <button
+            onClick={enableSprintPlan}
+            className="px-6 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+          >
+            Enable Sprint Plan
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Apply overrides: redistribute tasks across sprints
+  type TaskWithSprint = Task & { originalSprint: number };
+  const allTasks: TaskWithSprint[] = roadmap.sprints.flatMap(s =>
+    s.tasks.map(t => ({ ...t, originalSprint: s.number }))
+  );
+
+  // Build effective sprint map
+  const sprintMap: Map<number, TaskWithSprint[]> = new Map(
+    roadmap.sprints.map(s => [s.number, []])
+  );
+  for (const task of allTasks) {
+    const effectiveSprint = overrides[task.id] ?? task.originalSprint;
+    if (!sprintMap.has(effectiveSprint)) sprintMap.set(effectiveSprint, []);
+    sprintMap.get(effectiveSprint)!.push(task);
+  }
+
+  const sprintNumbers = Array.from(sprintMap.keys()).sort((a, b) => a - b);
+  const sprintMeta: Record<number, Sprint> = {};
+  for (const s of roadmap.sprints) sprintMeta[s.number] = s;
+
+  const totalTasks = allTasks.length;
+  const doneTasks = allTasks.filter(t => completedTasks.has(t.id)).length;
+
+  return (
+    <div className="p-8">
+      <div className="mb-8 flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Sprints</h1>
+          <p className="text-gray-500 text-sm mt-1">
+            Week-by-week breakdown — {doneTasks}/{totalTasks} tasks complete.
+            Move tasks between sprints using the dropdown on each row.
+          </p>
+        </div>
+        {Object.keys(overrides).length > 0 && (
+          <button
+            onClick={() => {
+              setOverrides({});
+              localStorage.removeItem('soc2-sprint-overrides');
+            }}
+            className="text-xs text-gray-400 hover:text-gray-600 underline"
+          >
+            Reset to original schedule
+          </button>
+        )}
+      </div>
+
+      <div className="space-y-6">
+        {sprintNumbers.map(num => {
+          const tasks = sprintMap.get(num) ?? [];
+          const meta = sprintMeta[num];
+          const done = tasks.filter(t => completedTasks.has(t.id)).length;
+          const pct = tasks.length ? Math.round((done / tasks.length) * 100) : 0;
+
+          return (
+            <div key={num} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+              {/* Sprint header */}
+              <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-4">
+                <div className="flex-1">
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Sprint {num}</span>
+                    {meta && (
+                      <>
+                        <span className="text-xs text-gray-300">·</span>
+                        <span className="text-xs text-gray-500">{meta.weeks}</span>
+                        <span className="text-xs text-gray-300">·</span>
+                        <span className="text-sm font-semibold text-gray-700">{meta.name}</span>
+                      </>
+                    )}
+                  </div>
+                  {meta && <p className="text-xs text-gray-400 mt-0.5">{meta.focus}</p>}
+                </div>
+                <div className="flex items-center gap-3 shrink-0">
+                  <div className="flex items-center gap-2">
+                    <div className="w-24 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                      <div className={`h-full rounded-full ${pct === 100 ? 'bg-green-500' : 'bg-blue-500'}`} style={{ width: `${pct}%` }} />
+                    </div>
+                    <span className="text-xs text-gray-400">{done}/{tasks.length}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Tasks */}
+              {tasks.length === 0 ? (
+                <div className="px-5 py-6 text-center text-sm text-gray-400">
+                  No tasks scheduled for this sprint
+                </div>
+              ) : (
+                <ul className="divide-y divide-gray-50">
+                  {tasks.map(task => {
+                    const done = completedTasks.has(task.id);
+                    const movedFrom = overrides[task.id] !== undefined && overrides[task.id] !== task.originalSprint;
+
+                    return (
+                      <li key={task.id} className={`px-5 py-3.5 flex items-center gap-3 ${done ? 'bg-gray-50' : ''}`}>
+                        {/* Checkbox */}
+                        <button
+                          onClick={() => toggleTask(task.id)}
+                          className={`w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${
+                            done ? 'bg-green-600 border-green-600' : 'border-gray-300 hover:border-blue-500'
+                          }`}
+                        >
+                          {done && (
+                            <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                            </svg>
+                          )}
+                        </button>
+
+                        {/* Category icon */}
+                        <span className="text-sm shrink-0">{CATEGORY_ICON[task.category]}</span>
+
+                        {/* Title */}
+                        <div className="flex-1 min-w-0">
+                          <p className={`text-sm font-medium truncate ${done ? 'line-through text-gray-400' : 'text-gray-800'}`}>
+                            {task.title}
+                          </p>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <span className="font-mono text-xs bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded">{task.controlReference}</span>
+                            <span className="text-xs text-gray-400">~{task.effort}</span>
+                            {movedFrom && (
+                              <span className="text-xs text-blue-500 italic">moved</span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Priority */}
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium shrink-0 ${PRIORITY_BADGE[task.priority]}`}>
+                          {task.priority}
+                        </span>
+
+                        {/* Move dropdown */}
+                        <select
+                          value={overrides[task.id] ?? task.originalSprint}
+                          onChange={e => moveTask(task.id, Number(e.target.value))}
+                          className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-white text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 shrink-0"
+                          title="Move to sprint"
+                        >
+                          {sprintNumbers.map(n => (
+                            <option key={n} value={n}>Sprint {n}</option>
+                          ))}
+                        </select>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
