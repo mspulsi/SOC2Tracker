@@ -29,7 +29,6 @@ const initialFormData: IntakeFormData = {
     industry: '',
     employeeCount: '',
     yearFounded: '',
-    website: '',
   },
   technicalInfrastructure: {
     cloudProviders: [],
@@ -75,6 +74,7 @@ const initialFormData: IntakeFormData = {
     hasVendorAssessment: false,
     hasVendorInventory: false,
     hasDataProcessingAgreements: false,
+    vendorList: [],
   },
   businessContinuity: {
     hasBackupStrategy: false,
@@ -85,7 +85,9 @@ const initialFormData: IntakeFormData = {
     rpoRequirement: '',
   },
   targetCompletionDate: '',
+  targetDateRange: undefined,
   soc2Type: 'type1',
+  soc2Stage: 'from-scratch',
   trustServiceCriteria: ['security'],
   wantsSprintPlan: true,
 };
@@ -98,6 +100,14 @@ export default function IntakeForm({ onComplete }: IntakeFormProps) {
   const [currentStep, setCurrentStep] = useState(0);
   const [formData, setFormData] = useState<IntakeFormData>(initialFormData);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const isStepBlocked = (): boolean => {
+    if (currentStep === 1) {
+      const h = formData.technicalInfrastructure.hostingType;
+      return h === 'Hybrid (cloud + on-premise)' || h === 'Fully on-premise';
+    }
+    return false;
+  };
 
   const handleNext = () => {
     if (currentStep < STEPS.length - 1) {
@@ -180,7 +190,9 @@ export default function IntakeForm({ onComplete }: IntakeFormProps) {
           <ComplianceGoalsSection
             data={{
               targetCompletionDate: formData.targetCompletionDate,
+              targetDateRange: formData.targetDateRange,
               soc2Type: formData.soc2Type,
+              soc2Stage: formData.soc2Stage,
               trustServiceCriteria: formData.trustServiceCriteria,
               wantsSprintPlan: formData.wantsSprintPlan,
             }}
@@ -226,7 +238,8 @@ export default function IntakeForm({ onComplete }: IntakeFormProps) {
           <button
             type="button"
             onClick={handleNext}
-            className="px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-all shadow-sm hover:shadow-md"
+            disabled={isStepBlocked()}
+            className="px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-all shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <span className="flex items-center gap-2">
               Continue

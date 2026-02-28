@@ -8,51 +8,87 @@ import type {
   Sprint,
   Task,
   RiskLevel,
+  ScoreBreakdown,
 } from '@/types/roadmap';
 
 // ─── Maturity Score ───────────────────────────────────────────────────────────
 
-function calcMaturityScore(data: IntakeFormData): number {
-  let score = 0;
-
+function calcMaturityScore(data: IntakeFormData): { score: number; breakdown: ScoreBreakdown[] } {
   const { accessControl, securityPosture, technicalInfrastructure, dataHandling, businessContinuity, vendorManagement } = data;
 
-  // Access controls (34 pts)
-  if (accessControl.hasSSO) score += 8;
-  if (accessControl.hasMFA) {
-    score += accessControl.mfaCoverage === 'All users' ? 10 : 5;
+  const breakdown: ScoreBreakdown[] = [
+    {
+      category: 'Access Controls',
+      maximum: 34,
+      controls: [
+        { name: 'Single Sign-On (SSO)', earned: accessControl.hasSSO ? 8 : 0, maximum: 8 },
+        { name: 'Multi-Factor Authentication', earned: accessControl.hasMFA ? (accessControl.mfaCoverage === 'All users' ? 10 : 5) : 0, maximum: 10 },
+        { name: 'Role-Based Access Control', earned: accessControl.hasRBAC ? 6 : 0, maximum: 6 },
+        { name: 'Access Reviews', earned: accessControl.hasAccessReviews ? 5 : 0, maximum: 5 },
+        { name: 'Privileged Access Management', earned: accessControl.hasPrivilegedAccessManagement ? 5 : 0, maximum: 5 },
+      ],
+      earned: 0,
+    },
+    {
+      category: 'Security Posture',
+      maximum: 30,
+      controls: [
+        { name: 'Security Policies', earned: securityPosture.hasSecurityPolicies ? 8 : 0, maximum: 8 },
+        { name: 'Incident Response Plan', earned: securityPosture.hasIncidentResponsePlan ? 7 : 0, maximum: 7 },
+        { name: 'Vulnerability Management', earned: securityPosture.hasVulnerabilityManagement ? 6 : 0, maximum: 6 },
+        { name: 'Penetration Testing', earned: securityPosture.hasPenetrationTesting ? 5 : 0, maximum: 5 },
+        { name: 'Security Awareness Training', earned: securityPosture.hasSecurityAwareness ? 4 : 0, maximum: 4 },
+      ],
+      earned: 0,
+    },
+    {
+      category: 'Technical Infrastructure',
+      maximum: 10,
+      controls: [
+        { name: 'Monitoring & Alerting', earned: technicalInfrastructure.hasMonitoring ? 6 : 0, maximum: 6 },
+        { name: 'CI/CD Pipeline', earned: technicalInfrastructure.hasCI_CD ? 4 : 0, maximum: 4 },
+      ],
+      earned: 0,
+    },
+    {
+      category: 'Data Handling',
+      maximum: 12,
+      controls: [
+        { name: 'Data Classification', earned: dataHandling.hasDataClassification ? 4 : 0, maximum: 4 },
+        { name: 'Encryption at Rest', earned: dataHandling.hasEncryptionAtRest ? 4 : 0, maximum: 4 },
+        { name: 'Encryption in Transit', earned: dataHandling.hasEncryptionInTransit ? 4 : 0, maximum: 4 },
+      ],
+      earned: 0,
+    },
+    {
+      category: 'Business Continuity',
+      maximum: 13,
+      controls: [
+        { name: 'Backup Strategy', earned: businessContinuity.hasBackupStrategy ? 5 : 0, maximum: 5 },
+        { name: 'Disaster Recovery Plan', earned: businessContinuity.hasDisasterRecoveryPlan ? 5 : 0, maximum: 5 },
+        { name: 'BCP Testing', earned: businessContinuity.hasBCPTesting ? 3 : 0, maximum: 3 },
+      ],
+      earned: 0,
+    },
+    {
+      category: 'Vendor Management',
+      maximum: 9,
+      controls: [
+        { name: 'Vendor Risk Assessment', earned: vendorManagement.hasVendorAssessment ? 4 : 0, maximum: 4 },
+        { name: 'Data Processing Agreements', earned: vendorManagement.hasDataProcessingAgreements ? 3 : 0, maximum: 3 },
+        { name: 'Vendor Inventory', earned: vendorManagement.hasVendorInventory ? 2 : 0, maximum: 2 },
+      ],
+      earned: 0,
+    },
+  ];
+
+  // Sum earned per category
+  for (const cat of breakdown) {
+    cat.earned = cat.controls.reduce((sum, c) => sum + c.earned, 0);
   }
-  if (accessControl.hasRBAC) score += 6;
-  if (accessControl.hasAccessReviews) score += 5;
-  if (accessControl.hasPrivilegedAccessManagement) score += 5;
 
-  // Security posture (30 pts)
-  if (securityPosture.hasSecurityPolicies) score += 8;
-  if (securityPosture.hasIncidentResponsePlan) score += 7;
-  if (securityPosture.hasVulnerabilityManagement) score += 6;
-  if (securityPosture.hasPenetrationTesting) score += 5;
-  if (securityPosture.hasSecurityAwareness) score += 4;
-
-  // Technical infrastructure (10 pts)
-  if (technicalInfrastructure.hasMonitoring) score += 6;
-  if (technicalInfrastructure.hasCI_CD) score += 4;
-
-  // Data handling (12 pts)
-  if (dataHandling.hasDataClassification) score += 4;
-  if (dataHandling.hasEncryptionAtRest) score += 4;
-  if (dataHandling.hasEncryptionInTransit) score += 4;
-
-  // Business continuity (13 pts)
-  if (businessContinuity.hasBackupStrategy) score += 5;
-  if (businessContinuity.hasDisasterRecoveryPlan) score += 5;
-  if (businessContinuity.hasBCPTesting) score += 3;
-
-  // Vendor management (9 pts)
-  if (vendorManagement.hasVendorAssessment) score += 4;
-  if (vendorManagement.hasDataProcessingAgreements) score += 3;
-  if (vendorManagement.hasVendorInventory) score += 2;
-
-  return Math.min(score, 100);
+  const score = Math.min(breakdown.reduce((sum, cat) => sum + cat.earned, 0), 100);
+  return { score, breakdown };
 }
 
 function scoreToRiskLevel(score: number): RiskLevel {
@@ -81,8 +117,11 @@ function calcTimeline(data: IntakeFormData, maturityScore: number): number {
 
   // Org factors
   if (!data.securityPosture.hasSecurityTeam) weeks += 4;
-  const bigTeam = ['51-200', '201-500', '500+'].includes(data.companyInfo.employeeCount);
-  if (bigTeam) weeks += 2;
+  if (data.companyInfo.employeeCount === '50+') weeks += 2;
+
+  // SOC 2 stage modifiers
+  if (data.soc2Stage === 'renewal') weeks -= 4;
+  else if (data.soc2Stage === 'in-progress') weeks -= 2;
 
   return Math.max(weeks, data.soc2Type === 'type1' ? 6 : 12);
 }
@@ -941,7 +980,7 @@ function buildScope(data: IntakeFormData): import('@/types/roadmap').ScopeDecisi
 // ─── Main Engine Export ───────────────────────────────────────────────────────
 
 export function generateRoadmap(data: IntakeFormData): ComplianceRoadmap {
-  const maturityScore = calcMaturityScore(data);
+  const { score: maturityScore, breakdown: scoreBreakdown } = calcMaturityScore(data);
   const riskLevel = scoreToRiskLevel(maturityScore);
   const recommendedTimeline = calcTimeline(data, maturityScore);
   const gaps = buildGaps(data);
@@ -961,6 +1000,7 @@ export function generateRoadmap(data: IntakeFormData): ComplianceRoadmap {
     evidence,
     risks,
     scope,
+    scoreBreakdown,
     generatedAt: new Date().toISOString(),
   };
 }

@@ -46,6 +46,8 @@ export default function HomePage() {
   const router = useRouter();
   const { intakeData, roadmap, loading } = useRoadmap();
   const vendorSummary = useVendorSummary();
+  const [showMaturityModal, setShowMaturityModal] = useState(false);
+  const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
 
   useEffect(() => {
     checkAuth().then(({ isAuthenticated }) => {
@@ -101,8 +103,15 @@ export default function HomePage() {
       <div className="grid grid-cols-2 gap-5 mb-8">
 
         {/* Security Maturity */}
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
-          <p className="text-xs text-gray-400 uppercase tracking-widest font-medium mb-4">Security Maturity</p>
+        <button
+          type="button"
+          onClick={() => setShowMaturityModal(true)}
+          className="bg-white rounded-xl border border-gray-200 p-6 text-left hover:border-blue-300 transition-colors group w-full"
+        >
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-xs text-gray-400 uppercase tracking-widest font-medium">Security Maturity</p>
+            <span className="text-xs text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity">View breakdown →</span>
+          </div>
           <div className="flex items-end gap-3 mb-3">
             <span className={`text-5xl font-bold ${scoreTextColor}`}>{roadmap.maturityScore}</span>
             <span className="text-gray-300 text-2xl mb-1">/100</span>
@@ -118,7 +127,7 @@ export default function HomePage() {
             <span>50</span>
             <span>100</span>
           </div>
-        </div>
+        </button>
 
         {/* SOC 2 Type & Scope */}
         <div className="bg-white rounded-xl border border-gray-200 p-6">
@@ -260,6 +269,99 @@ export default function HomePage() {
                 </div>
               );
             })}
+          </div>
+        </div>
+      )}
+
+      {/* Maturity drill-down modal */}
+      {showMaturityModal && roadmap.scoreBreakdown && (
+        <div
+          className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4"
+          onClick={() => setShowMaturityModal(false)}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[80vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-6 border-b border-gray-100 flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-gray-900">Security Maturity Breakdown</h2>
+                <p className="text-sm text-gray-500 mt-0.5">Score: {roadmap.maturityScore}/100 · {roadmap.riskLevel} risk</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowMaturityModal(false)}
+                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              {roadmap.scoreBreakdown.map((cat) => {
+                const pct = cat.maximum > 0 ? Math.round((cat.earned / cat.maximum) * 100) : 0;
+                const isExpanded = expandedCategory === cat.category;
+                const catColor = pct < 30 ? 'bg-red-500' : pct < 60 ? 'bg-orange-500' : pct < 80 ? 'bg-yellow-500' : 'bg-green-500';
+
+                return (
+                  <div key={cat.category} className="border border-gray-100 rounded-xl overflow-hidden">
+                    <button
+                      type="button"
+                      onClick={() => setExpandedCategory(isExpanded ? null : cat.category)}
+                      className="w-full p-4 text-left hover:bg-gray-50 transition-colors"
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-semibold text-gray-800">{cat.category}</span>
+                        <span className="text-sm text-gray-500 font-medium">{cat.earned}/{cat.maximum}</span>
+                      </div>
+                      <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                        <div className={`h-full ${catColor} rounded-full transition-all`} style={{ width: `${pct}%` }} />
+                      </div>
+                      <div className="flex items-center justify-between mt-1.5">
+                        <span className="text-xs text-gray-400">{pct}% earned</span>
+                        <svg
+                          className={`w-4 h-4 text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                          fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </div>
+                    </button>
+
+                    {isExpanded && (
+                      <div className="border-t border-gray-100 divide-y divide-gray-50">
+                        {cat.controls.map((ctrl) => (
+                          <div key={ctrl.name} className="flex items-center justify-between px-4 py-2.5">
+                            <div className="flex items-center gap-2">
+                              <span className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 ${ctrl.earned > 0 ? 'bg-green-100' : 'bg-gray-100'}`}>
+                                {ctrl.earned > 0
+                                  ? <svg className="w-2.5 h-2.5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                                  : <svg className="w-2.5 h-2.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                                }
+                              </span>
+                              <span className="text-xs text-gray-700">{ctrl.name}</span>
+                            </div>
+                            <span className="text-xs text-gray-400">{ctrl.earned}/{ctrl.maximum}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="p-6 border-t border-gray-100">
+              <Link
+                href="/dashboard/overview"
+                onClick={() => setShowMaturityModal(false)}
+                className="block w-full text-center py-2.5 bg-blue-600 text-white text-sm font-semibold rounded-xl hover:bg-blue-700 transition-colors"
+              >
+                See your gaps →
+              </Link>
+            </div>
           </div>
         </div>
       )}

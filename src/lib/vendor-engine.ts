@@ -358,6 +358,46 @@ export function autoPopulateVendors(data: IntakeFormData): Vendor[] {
   // Always add Slack as a common communication tool (medium risk, safe default)
   add('Slack');
 
+  // Process manually entered vendor list
+  if (data.vendorManagement.vendorList) {
+    // Build a case-insensitive lookup map for known vendor keys
+    const knownKeysLower = new Map<string, string>(
+      Object.keys(KNOWN_VENDORS).map(k => [k.toLowerCase(), k])
+    );
+
+    for (const entry of data.vendorManagement.vendorList) {
+      const trimmed = entry.trim();
+      if (!trimmed) continue;
+
+      const knownKey = knownKeysLower.get(trimmed.toLowerCase());
+      if (knownKey) {
+        add(knownKey);
+      } else if (!vendors.has(trimmed)) {
+        // Unknown vendor — create a bare record
+        vendors.set(trimmed, {
+          id: trimmed.toLowerCase().replace(/[^a-z0-9]/g, '-'),
+          name: trimmed,
+          website: '',
+          category: 'Business Ops',
+          riskTier: 'medium',
+          dataAccess: [],
+          hasProductionAccess: false,
+          assessmentStatus: 'not-started',
+          lastReviewed: null,
+          nextReviewDue: getNextReviewDate('medium'),
+          hasSoc2Report: null,
+          soc2ReportUrl: null,
+          hasDPA: null,
+          hasBAA: null,
+          notes: '',
+          isAutoDetected: true,
+          confirmedByUser: false,
+          assessmentHistory: [],
+        });
+      }
+    }
+  }
+
   return Array.from(vendors.values());
 }
 

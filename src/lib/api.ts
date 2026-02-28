@@ -474,7 +474,7 @@ export function convertIntakeToApiFormat(frontendData: {
     industry: string;
     employeeCount: string;
     yearFounded: string;
-    website: string;
+    website?: string;
   };
   technicalInfrastructure: {
     cloudProviders: string[];
@@ -539,7 +539,7 @@ export function convertIntakeToApiFormat(frontendData: {
       industry: frontendData.companyInfo.industry,
       employee_count: frontendData.companyInfo.employeeCount,
       year_founded: frontendData.companyInfo.yearFounded,
-      website: frontendData.companyInfo.website,
+      website: frontendData.companyInfo.website ?? '',
     },
     technical_infrastructure: {
       cloud_providers: frontendData.technicalInfrastructure.cloudProviders,
