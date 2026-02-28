@@ -2,11 +2,11 @@
 
 import { IntakeFormData, TRUST_SERVICE_CRITERIA } from '@/types/intake';
 import FormSection from '../FormSection';
-import { Input, RadioGroup, CheckboxGroup, InfoBox } from '../FormFields';
+import { Input, RadioGroup, CheckboxGroup, InfoBox, Toggle } from '../FormFields';
 
 interface ComplianceGoalsSectionProps {
-  data: Pick<IntakeFormData, 'targetCompletionDate' | 'soc2Type' | 'trustServiceCriteria'>;
-  onChange: (data: Pick<IntakeFormData, 'targetCompletionDate' | 'soc2Type' | 'trustServiceCriteria'>) => void;
+  data: Pick<IntakeFormData, 'targetCompletionDate' | 'soc2Type' | 'trustServiceCriteria' | 'wantsSprintPlan'>;
+  onChange: (data: Pick<IntakeFormData, 'targetCompletionDate' | 'soc2Type' | 'trustServiceCriteria' | 'wantsSprintPlan'>) => void;
 }
 
 export default function ComplianceGoalsSection({ data, onChange }: ComplianceGoalsSectionProps) {
@@ -59,7 +59,7 @@ export default function ComplianceGoalsSection({ data, onChange }: ComplianceGoa
         label="Trust Service Criteria"
         options={TRUST_SERVICE_CRITERIA.map((tsc) => ({
           value: tsc.id,
-          label: `${tsc.name}${tsc.required ? ' (Required)' : ''}`,
+          label: `${tsc.name}${'required' in tsc && tsc.required ? ' (Required)' : ''}`,
           description: tsc.description,
         }))}
         selectedValues={data.trustServiceCriteria}
@@ -75,6 +75,13 @@ export default function ComplianceGoalsSection({ data, onChange }: ComplianceGoa
         onChange={(e) => updateField('targetCompletionDate', e.target.value)}
         min={new Date().toISOString().split('T')[0]}
         helpText="When do you need to be audit-ready? We'll plan your sprints accordingly."
+      />
+
+      <Toggle
+        label="Generate a week-by-week sprint plan"
+        description="We'll break your roadmap into 2-week blocks with specific tasks scheduled by week. You can move tasks around after."
+        checked={data.wantsSprintPlan ?? true}
+        onChange={(checked) => updateField('wantsSprintPlan', checked)}
       />
 
       {data.trustServiceCriteria.length > 2 && (

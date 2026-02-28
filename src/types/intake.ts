@@ -76,6 +76,7 @@ export interface IntakeFormData {
   targetCompletionDate: string;
   soc2Type: 'type1' | 'type2';
   trustServiceCriteria: string[];
+  wantsSprintPlan?: boolean;
 }
 
 export const INDUSTRIES = [
