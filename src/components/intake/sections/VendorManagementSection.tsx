@@ -61,6 +61,29 @@ export default function VendorManagementSection({ data, onChange }: VendorManage
         />
       </div>
 
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          List your key vendors <span className="text-gray-400 font-normal">(optional)</span>
+        </label>
+        <p className="text-xs text-gray-500 mb-2">
+          We&apos;ll pre-populate your vendor register with known tools. Separate with commas or new lines.
+        </p>
+        <textarea
+          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+          rows={3}
+          placeholder="e.g. AWS, Stripe, Salesforce, Datadog..."
+          value={(data.vendorList ?? []).join(', ')}
+          onChange={(e) => {
+            const raw = e.target.value;
+            const parsed = raw
+              .split(/[,\n]/)
+              .map((s) => s.trim())
+              .filter(Boolean);
+            updateField('vendorList', parsed);
+          }}
+        />
+      </div>
+
       {!data.hasVendorInventory && (
         <InfoBox type="tip">
           Creating a vendor inventory is a great first step. We&apos;ll help you build one

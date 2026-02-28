@@ -3,7 +3,7 @@ export interface CompanyInfo {
   industry: string;
   employeeCount: string;
   yearFounded: string;
-  website: string;
+  website?: string;
 }
 
 export interface TechnicalInfrastructure {
@@ -54,6 +54,7 @@ export interface VendorManagement {
   hasVendorAssessment: boolean;
   hasVendorInventory: boolean;
   hasDataProcessingAgreements: boolean;
+  vendorList?: string[];
 }
 
 export interface BusinessContinuity {
@@ -74,9 +75,11 @@ export interface IntakeFormData {
   vendorManagement: VendorManagement;
   businessContinuity: BusinessContinuity;
   targetCompletionDate: string;
+  targetDateRange?: '3-6-months' | '6-12-months';
   soc2Type: 'type1' | 'type2';
   trustServiceCriteria: string[];
   wantsSprintPlan?: boolean;
+  soc2Stage?: 'from-scratch' | 'in-progress' | 'renewal';
 }
 
 export const INDUSTRIES = [
@@ -92,11 +95,11 @@ export const INDUSTRIES = [
 ] as const;
 
 export const EMPLOYEE_COUNTS = [
-  '1-10',
-  '11-50',
-  '51-200',
-  '201-500',
-  '500+',
+  'Solo (just me)',
+  '1–5',
+  '5–15',
+  '15–50',
+  '50+',
 ] as const;
 
 export const CLOUD_PROVIDERS = [

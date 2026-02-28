@@ -19,22 +19,13 @@ export default function CompanyInfoSection({ data, onChange }: CompanyInfoSectio
       title="Company Information"
       description="Tell us about your company so we can tailor your compliance roadmap."
     >
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Input
-          label="Company Name"
-          value={data.companyName}
-          onChange={(e) => updateField('companyName', e.target.value)}
-          placeholder="Acme Inc."
-          required
-        />
-        <Input
-          label="Website"
-          type="url"
-          value={data.website}
-          onChange={(e) => updateField('website', e.target.value)}
-          placeholder="https://example.com"
-        />
-      </div>
+      <Input
+        label="Company Name"
+        value={data.companyName}
+        onChange={(e) => updateField('companyName', e.target.value)}
+        placeholder="Acme Inc."
+        required
+      />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Select

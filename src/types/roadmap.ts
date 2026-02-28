@@ -65,6 +65,19 @@ export interface ScopeDecision {
   estimatedAuditCost: string; // rough range to set expectations
 }
 
+export interface ScoreControl {
+  name: string;
+  earned: number;
+  maximum: number;
+}
+
+export interface ScoreBreakdown {
+  category: string;
+  earned: number;
+  maximum: number;
+  controls: ScoreControl[];
+}
+
 export interface ComplianceRoadmap {
   maturityScore: number; // 0–100
   riskLevel: RiskLevel;
@@ -75,5 +88,6 @@ export interface ComplianceRoadmap {
   evidence: EvidenceItem[];
   risks: RiskItem[];
   scope: ScopeDecision;
+  scoreBreakdown: ScoreBreakdown[];
   generatedAt: string; // ISO timestamp
 }
