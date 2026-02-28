@@ -1,25 +1,128 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { IntakeFormData } from '@/types/intake';
+import { api } from '@/lib/api';
+import { checkAuth, logout } from '@/lib/auth';
 
 export default function DashboardPage() {
+  const router = useRouter();
   const [intakeData, setIntakeData] = useState<IntakeFormData | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const stored = localStorage.getItem('soc2-intake-data');
-    if (stored) {
-      setIntakeData(JSON.parse(stored));
+    async function loadData() {
+      // Check authentication
+      const { isAuthenticated, hasIntake } = await checkAuth();
+      
+      if (!isAuthenticated) {
+        router.push('/login');
+        return;
+      }
+      
+      if (!hasIntake) {
+        router.push('/intake');
+        return;
+      }
+
+      // Try to get intake data from API first
+      const response = await api.getIntake();
+      
+      if (response.data) {
+        // Convert API response to frontend format
+        const data: IntakeFormData = {
+          companyInfo: {
+            companyName: response.data.company_info.company_name,
+            industry: response.data.company_info.industry,
+            employeeCount: response.data.company_info.employee_count,
+            yearFounded: response.data.company_info.year_founded,
+            website: response.data.company_info.website,
+          },
+          technicalInfrastructure: {
+            cloudProviders: response.data.technical_infrastructure.cloud_providers,
+            hostingType: response.data.technical_infrastructure.hosting_type,
+            hasProductionDatabase: response.data.technical_infrastructure.has_production_database,
+            databaseTypes: response.data.technical_infrastructure.database_types,
+            usesContainers: response.data.technical_infrastructure.uses_containers,
+            hasCI_CD: response.data.technical_infrastructure.has_ci_cd,
+            sourceCodeManagement: response.data.technical_infrastructure.source_code_management,
+            hasMonitoring: response.data.technical_infrastructure.has_monitoring,
+          },
+          dataHandling: {
+            handlesCustomerPII: response.data.data_handling.handles_customer_pii,
+            handlesPHI: response.data.data_handling.handles_phi,
+            handlesPaymentData: response.data.data_handling.handles_payment_data,
+            dataResidencyRequirements: response.data.data_handling.data_residency_requirements,
+            hasDataClassification: response.data.data_handling.has_data_classification,
+            hasEncryptionAtRest: response.data.data_handling.has_encryption_at_rest,
+            hasEncryptionInTransit: response.data.data_handling.has_encryption_in_transit,
+          },
+          securityPosture: {
+            hasSecurityTeam: response.data.security_posture.has_security_team,
+            securityTeamSize: response.data.security_posture.security_team_size,
+            hasSecurityPolicies: response.data.security_posture.has_security_policies,
+            hasIncidentResponsePlan: response.data.security_posture.has_incident_response_plan,
+            hasVulnerabilityManagement: response.data.security_posture.has_vulnerability_management,
+            hasPenetrationTesting: response.data.security_posture.has_penetration_testing,
+            hasSecurityAwareness: response.data.security_posture.has_security_awareness,
+            currentCompliances: response.data.security_posture.current_compliances,
+          },
+          accessControl: {
+            hasSSO: response.data.access_control.has_sso,
+            ssoProvider: response.data.access_control.sso_provider,
+            hasMFA: response.data.access_control.has_mfa,
+            mfaCoverage: response.data.access_control.mfa_coverage,
+            hasRBAC: response.data.access_control.has_rbac,
+            hasPrivilegedAccessManagement: response.data.access_control.has_privileged_access_management,
+            hasAccessReviews: response.data.access_control.has_access_reviews,
+            accessReviewFrequency: response.data.access_control.access_review_frequency,
+          },
+          vendorManagement: {
+            criticalVendorCount: response.data.vendor_management.critical_vendor_count,
+            hasVendorAssessment: response.data.vendor_management.has_vendor_assessment,
+            hasVendorInventory: response.data.vendor_management.has_vendor_inventory,
+            hasDataProcessingAgreements: response.data.vendor_management.has_data_processing_agreements,
+          },
+          businessContinuity: {
+            hasBackupStrategy: response.data.business_continuity.has_backup_strategy,
+            backupFrequency: response.data.business_continuity.backup_frequency,
+            hasDisasterRecoveryPlan: response.data.business_continuity.has_disaster_recovery_plan,
+            hasBCPTesting: response.data.business_continuity.has_bcp_testing,
+            rtoRequirement: response.data.business_continuity.rto_requirement,
+            rpoRequirement: response.data.business_continuity.rpo_requirement,
+          },
+          targetCompletionDate: response.data.target_completion_date,
+          soc2Type: response.data.soc2_type as 'type1' | 'type2',
+          trustServiceCriteria: response.data.trust_service_criteria,
+        };
+        setIntakeData(data);
+      } else {
+        // Fallback to localStorage
+        const stored = localStorage.getItem('soc2-intake-data');
+        if (stored) {
+          setIntakeData(JSON.parse(stored));
+        }
+      }
+      
+      setLoading(false);
     }
-    setLoading(false);
-  }, []);
+
+    loadData();
+  }, [router]);
+
+  const handleLogout = () => {
+    logout();
+  };
 
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4" />
+          <p className="text-gray-600">Loading dashboard...</p>
+        </div>
       </div>
     );
   }
@@ -73,6 +176,18 @@ export default function DashboardPage() {
               <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
                 SOC 2 {intakeData.soc2Type === 'type1' ? 'Type 1' : 'Type 2'}
               </span>
+              <Link
+                href="/setup/integrations"
+                className="text-sm text-gray-600 hover:text-gray-900"
+              >
+                Integrations
+              </Link>
+              <button
+                onClick={handleLogout}
+                className="text-sm text-gray-600 hover:text-gray-900"
+              >
+                Sign Out
+              </button>
             </div>
           </div>
         </div>
