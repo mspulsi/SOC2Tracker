@@ -223,13 +223,13 @@ export default function IntakePage() {
           </div>
 
           <button
-            onClick={() => router.push('/dashboard')}
+            onClick={() => router.push('/setup/integrations')}
             className="w-full px-8 py-4 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition-all text-base"
           >
-            Open Your Dashboard →
+            Connect Your Integrations →
           </button>
           <p className="text-center text-xs text-gray-400 mt-3">
-            Your roadmap is saved locally and available anytime at /dashboard
+            Connect your cloud providers and tools to enable automated compliance scanning
           </p>
         </div>
       </div>
