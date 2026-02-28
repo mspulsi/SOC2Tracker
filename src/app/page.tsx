@@ -23,12 +23,20 @@ export default function Home() {
             </div>
             <span className="text-xl font-bold text-white">SOC2 Tracker</span>
           </div>
-          <Link
-            href="/intake"
-            className="px-5 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-all"
-          >
-            Get Started
-          </Link>
+          <div className="flex items-center gap-4">
+            <Link
+              href="/login"
+              className="px-5 py-2.5 text-white font-medium hover:text-blue-400 transition-all"
+            >
+              Sign In
+            </Link>
+            <Link
+              href="/intake"
+              className="px-5 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-all"
+            >
+              Get Started
+            </Link>
+          </div>
         </div>
       </nav>
 

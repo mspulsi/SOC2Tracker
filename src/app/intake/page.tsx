@@ -1,11 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import IntakeForm from '@/components/intake/IntakeForm';
+import AuthForm from '@/components/auth/AuthForm';
 import { IntakeFormData } from '@/types/intake';
 import { generateRoadmap } from '@/lib/compliance-engine';
 import { ComplianceRoadmap, RiskLevel } from '@/types/roadmap';
+import { api, convertIntakeToApiFormat } from '@/lib/api';
 
 function riskBadge(level: RiskLevel) {
   const styles = {
@@ -17,21 +19,92 @@ function riskBadge(level: RiskLevel) {
   return styles[level];
 }
 
+type Step = 'loading' | 'auth' | 'intake' | 'complete';
+
 export default function IntakePage() {
   const router = useRouter();
-  const [isComplete, setIsComplete] = useState(false);
+  const [step, setStep] = useState<Step>('loading');
   const [formData, setFormData] = useState<IntakeFormData | null>(null);
   const [roadmap, setRoadmap] = useState<ComplianceRoadmap | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleComplete = (data: IntakeFormData) => {
-    const generated = generateRoadmap(data);
-    setFormData(data);
-    setRoadmap(generated);
-    setIsComplete(true);
-    localStorage.setItem('soc2-intake-data', JSON.stringify(data));
+  useEffect(() => {
+    const token = api.getAccessToken();
+    if (token) {
+      api.getIntake().then((response) => {
+        if (response.error?.code === 'authentication_error') {
+          api.setAccessToken(null);
+          setStep('auth');
+        } else if (response.data) {
+          // Already completed intake — go to dashboard
+          router.replace('/dashboard');
+        } else {
+          // Authenticated but no intake yet
+          setStep('intake');
+        }
+      }).catch(() => setStep('auth'));
+    } else {
+      setStep('auth');
+    }
+  }, [router]);
+
+  const handleAuthSuccess = () => {
+    setStep('intake');
   };
 
-  if (isComplete && formData && roadmap) {
+  const handleIntakeComplete = async (data: IntakeFormData) => {
+    setIsSubmitting(true);
+    setError(null);
+
+    // 1. Generate roadmap client-side and persist locally
+    const generated = generateRoadmap(data);
+    localStorage.setItem('soc2-intake-data', JSON.stringify(data));
+
+    // 2. Try to persist to API — non-blocking, failure is acceptable
+    try {
+      const apiData = convertIntakeToApiFormat(data);
+      await api.submitIntake(apiData);
+    } catch (e) {
+      console.warn('API submission failed, continuing with local data', e);
+    }
+
+    setFormData(data);
+    setRoadmap(generated);
+    setIsSubmitting(false);
+    setStep('complete');
+  };
+
+  if (step === 'loading') {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4" />
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (step === 'auth') {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white py-12 px-4">
+        <div className="max-w-4xl mx-auto mb-12 text-center">
+          <h1 className="text-4xl font-bold text-gray-900 mb-4">
+            Let&apos;s Build Your SOC 2 Roadmap
+          </h1>
+          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+            Create an account to save your progress and get a personalized compliance plan.
+          </p>
+        </div>
+        <div className="flex justify-center">
+          <AuthForm onSuccess={handleAuthSuccess} />
+        </div>
+      </div>
+    );
+  }
+
+  if (step === 'complete' && formData && roadmap) {
     const criticalGaps = roadmap.gaps.filter(g => g.severity === 'critical').length;
     const missingPolicies = roadmap.policies.filter(p => !p.exists && p.required).length;
     const totalTasks = roadmap.sprints.flatMap(s => s.tasks).length;
@@ -163,6 +236,7 @@ export default function IntakePage() {
     );
   }
 
+  // Intake form step
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white py-12 px-4">
       <div className="max-w-4xl mx-auto mb-12 text-center">
@@ -175,7 +249,25 @@ export default function IntakePage() {
         </p>
       </div>
 
-      <IntakeForm onComplete={handleComplete} />
+      {error && (
+        <div className="max-w-4xl mx-auto mb-6">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center gap-3">
+            <svg className="w-5 h-5 text-red-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+            </svg>
+            <p className="text-red-800">{error}</p>
+          </div>
+        </div>
+      )}
+
+      {isSubmitting ? (
+        <div className="max-w-4xl mx-auto text-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4" />
+          <p className="text-gray-600">Analyzing your responses and generating your roadmap...</p>
+        </div>
+      ) : (
+        <IntakeForm onComplete={handleIntakeComplete} />
+      )}
     </div>
   );
 }

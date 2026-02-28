@@ -2,9 +2,11 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useRoadmap } from '@/lib/use-roadmap';
 import { RiskLevel } from '@/types/roadmap';
 import { Vendor } from '@/types/vendor';
+import { checkAuth } from '@/lib/auth';
 
 function riskColors(level: RiskLevel) {
   return {
@@ -41,8 +43,17 @@ function useVendorSummary() {
 }
 
 export default function HomePage() {
+  const router = useRouter();
   const { intakeData, roadmap, loading } = useRoadmap();
   const vendorSummary = useVendorSummary();
+
+  useEffect(() => {
+    checkAuth().then(({ isAuthenticated }) => {
+      if (!isAuthenticated) {
+        router.replace('/login');
+      }
+    });
+  }, [router]);
 
   if (loading) {
     return (
@@ -139,7 +150,6 @@ export default function HomePage() {
               <span>Audit-ready</span>
             </div>
             <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-              {/* Show rough position — assumes 0 weeks elapsed at start */}
               <div className="h-full bg-blue-600 rounded-full" style={{ width: '4%' }} />
             </div>
           </div>
@@ -225,7 +235,7 @@ export default function HomePage() {
 
       {/* Top risks */}
       {roadmap.risks.length > 0 && (
-        <div>
+        <div className="mt-8">
           <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-widest mb-4">Top Risks</h2>
           <div className="space-y-3">
             {roadmap.risks.map(risk => {
