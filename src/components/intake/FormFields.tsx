@@ -1,6 +1,6 @@
 'use client';
 
-import { InputHTMLAttributes, SelectHTMLAttributes, ReactNode } from 'react';
+import { InputHTMLAttributes, SelectHTMLAttributes, TextareaHTMLAttributes, ReactNode } from 'react';
 
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label: string;
@@ -17,6 +17,35 @@ export function Input({ label, error, helpText, className = '', ...props }: Inpu
       </label>
       <input
         className={`w-full px-4 py-2.5 border rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+          error
+            ? 'border-red-300 bg-red-50'
+            : 'border-gray-300 bg-white hover:border-gray-400'
+        } ${className}`}
+        {...props}
+      />
+      {helpText && !error && (
+        <p className="text-sm text-gray-500">{helpText}</p>
+      )}
+      {error && <p className="text-sm text-red-600">{error}</p>}
+    </div>
+  );
+}
+
+interface TextAreaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {
+  label: string;
+  error?: string;
+  helpText?: string;
+}
+
+export function TextArea({ label, error, helpText, className = '', ...props }: TextAreaProps) {
+  return (
+    <div className="space-y-1">
+      <label className="block text-sm font-medium text-gray-700">
+        {label}
+        {props.required && <span className="text-red-500 ml-1">*</span>}
+      </label>
+      <textarea
+        className={`w-full px-4 py-2.5 border rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-y ${
           error
             ? 'border-red-300 bg-red-50'
             : 'border-gray-300 bg-white hover:border-gray-400'

@@ -21,17 +21,8 @@ const CATEGORY_ICON: Record<Task['category'], string> = {
   evidence: '📋',
 };
 
-function enableSprintPlan() {
-  const stored = localStorage.getItem('soc2-intake-data');
-  if (!stored) return;
-  const data = JSON.parse(stored);
-  data.wantsSprintPlan = true;
-  localStorage.setItem('soc2-intake-data', JSON.stringify(data));
-  window.location.reload();
-}
-
 export default function SprintsPage() {
-  const { intakeData, roadmap, loading, completedTasks, toggleTask } = useRoadmap();
+  const { roadmap, loading, completedTasks, toggleTask } = useRoadmap();
   const [overrides, setOverrides] = useState<SprintOverrides>({});
 
   useEffect(() => {
@@ -49,7 +40,7 @@ export default function SprintsPage() {
     return <div className="flex items-center justify-center h-96"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" /></div>;
   }
 
-  if (!intakeData || !roadmap) {
+  if (!roadmap) {
     return (
       <div className="p-8 text-center text-gray-500">
         No assessment found. <Link href="/intake" className="text-blue-600 underline">Start assessment</Link>
@@ -57,8 +48,7 @@ export default function SprintsPage() {
     );
   }
 
-  // User opted out of sprint planning
-  if (intakeData.wantsSprintPlan === false) {
+  if (roadmap.sprints.length === 0) {
     return (
       <div className="p-8">
         <div className="mb-8">
@@ -72,14 +62,14 @@ export default function SprintsPage() {
           </div>
           <h2 className="text-lg font-semibold text-gray-900 mb-2">No Sprint Plan</h2>
           <p className="text-gray-500 text-sm mb-6">
-            You opted out of week-by-week sprint planning during setup. Enable it to see your tasks broken down into 2-week sprints with scheduling.
+            No sprints were generated for your roadmap.
           </p>
-          <button
-            onClick={enableSprintPlan}
-            className="px-6 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+          <Link
+            href="/intake"
+            className="px-6 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors inline-block"
           >
-            Enable Sprint Plan
-          </button>
+            Retake Assessment
+          </Link>
         </div>
       </div>
     );

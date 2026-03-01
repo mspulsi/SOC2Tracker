@@ -5,9 +5,8 @@ import { useRouter } from 'next/navigation';
 import IntakeForm from '@/components/intake/IntakeForm';
 import AuthForm from '@/components/auth/AuthForm';
 import { IntakeFormData } from '@/types/intake';
-import { generateRoadmap } from '@/lib/compliance-engine';
 import { ComplianceRoadmap, RiskLevel } from '@/types/roadmap';
-import { api, convertIntakeToApiFormat } from '@/lib/api';
+import { api, convertIntakeToApiFormat, convertApiRoadmapToFrontend } from '@/lib/api';
 
 function riskBadge(level: RiskLevel) {
   const styles = {
@@ -24,26 +23,37 @@ type Step = 'loading' | 'auth' | 'intake' | 'complete';
 export default function IntakePage() {
   const router = useRouter();
   const [step, setStep] = useState<Step>('loading');
-  const [formData, setFormData] = useState<IntakeFormData | null>(null);
   const [roadmap, setRoadmap] = useState<ComplianceRoadmap | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
+    // Check if user has already completed intake (local storage)
+    const existingRoadmap = localStorage.getItem('soc2-roadmap');
+    if (existingRoadmap) {
+      router.replace('/dashboard');
+      return;
+    }
+
     const token = api.getAccessToken();
     if (token) {
       api.getIntake().then((response) => {
         if (response.error?.code === 'authentication_error') {
           api.setAccessToken(null);
           setStep('auth');
-        } else if (response.data) {
-          // Already completed intake — go to dashboard
+        } else if (response.data?.roadmap) {
+          // Already completed intake on backend — save roadmap and go to dashboard
+          const frontendRoadmap = convertApiRoadmapToFrontend(response.data.roadmap);
+          localStorage.setItem('soc2-roadmap', JSON.stringify(frontendRoadmap));
           router.replace('/dashboard');
         } else {
           // Authenticated but no intake yet
           setStep('intake');
         }
-      }).catch(() => setStep('auth'));
+      }).catch(() => {
+        // API error but user is authenticated, let them proceed with intake
+        setStep('intake');
+      });
     } else {
       setStep('auth');
     }
@@ -57,22 +67,31 @@ export default function IntakePage() {
     setIsSubmitting(true);
     setError(null);
 
-    // 1. Generate roadmap client-side and persist locally
-    const generated = generateRoadmap(data);
-    localStorage.setItem('soc2-intake-data', JSON.stringify(data));
-
-    // 2. Try to persist to API — non-blocking, failure is acceptable
     try {
       const apiData = convertIntakeToApiFormat(data);
-      await api.submitIntake(apiData);
-    } catch (e) {
-      console.warn('API submission failed, continuing with local data', e);
-    }
+      const response = await api.submitIntake(apiData);
 
-    setFormData(data);
-    setRoadmap(generated);
-    setIsSubmitting(false);
-    setStep('complete');
+      if (response.error) {
+        setError(response.error.message);
+        setIsSubmitting(false);
+        return;
+      }
+
+      if (response.data?.roadmap) {
+        const frontendRoadmap = convertApiRoadmapToFrontend(response.data.roadmap);
+        localStorage.setItem('soc2-roadmap', JSON.stringify(frontendRoadmap));
+        setRoadmap(frontendRoadmap);
+        setIsSubmitting(false);
+        setStep('complete');
+      } else {
+        setError('No roadmap returned from server');
+        setIsSubmitting(false);
+      }
+    } catch (e) {
+      console.error('Intake submission failed:', e);
+      setError('Failed to submit intake. Please try again.');
+      setIsSubmitting(false);
+    }
   };
 
   if (step === 'loading') {
@@ -104,7 +123,7 @@ export default function IntakePage() {
     );
   }
 
-  if (step === 'complete' && formData && roadmap) {
+  if (step === 'complete' && roadmap) {
     const criticalGaps = roadmap.gaps.filter(g => g.severity === 'critical').length;
     const missingPolicies = roadmap.policies.filter(p => !p.exists && p.required).length;
     const totalTasks = roadmap.sprints.flatMap(s => s.tasks).length;
@@ -121,7 +140,7 @@ export default function IntakePage() {
               </svg>
             </div>
             <h1 className="text-2xl font-bold text-gray-900 mb-2">
-              Here&apos;s what we determined for {formData.companyInfo.companyName}
+              Here&apos;s your SOC 2 roadmap
             </h1>
             <p className="text-gray-500 text-sm">
               Based on your answers, we made every structural decision a compliance consultant would charge $5,000 to figure out.
@@ -132,9 +151,9 @@ export default function IntakePage() {
           <div className="grid grid-cols-2 gap-3 mb-4">
             <div className="bg-white rounded-xl border border-gray-200 p-4">
               <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Scope</p>
-              <p className="font-semibold text-gray-900">SOC 2 {formData.soc2Type === 'type1' ? 'Type 1' : 'Type 2'}</p>
+              <p className="font-semibold text-gray-900">SOC 2 {roadmap.scope.type === 'type1' ? 'Type 1' : 'Type 2'}</p>
               <p className="text-xs text-gray-500 mt-0.5">
-                {formData.trustServiceCriteria.map(c => c.replace('_', ' ')).join(', ')}
+                {roadmap.scope.criteria.map(c => c.replace('_', ' ')).join(', ')}
               </p>
             </div>
 
@@ -192,11 +211,11 @@ export default function IntakePage() {
                   <span className="mt-0.5 w-5 h-5 rounded-full bg-blue-100 flex items-center justify-center shrink-0 text-xs">📋</span>
                   <p className="text-sm text-gray-700">
                     <span className="font-medium">{roadmap.evidence.filter(e => !e.alreadyHave).length} evidence items</span> to collect
-                    {formData.soc2Type === 'type2' ? ', including 90-day rolling logs that start now' : ' at audit time'}
+                    {roadmap.scope.type === 'type2' ? ', including 90-day rolling logs that start now' : ' at audit time'}
                   </p>
                 </div>
               )}
-              {roadmap.risks.filter(r => r.severity === 'critical').length > 0 && (
+              {roadmap.risks.length > 0 && (
                 <div className="flex items-start gap-2.5">
                   <span className="mt-0.5 w-5 h-5 rounded-full bg-red-100 flex items-center justify-center shrink-0 text-xs">⚠️</span>
                   <p className="text-sm text-gray-700">

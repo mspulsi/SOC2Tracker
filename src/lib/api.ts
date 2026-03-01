@@ -59,10 +59,8 @@ class ApiClient {
       const data = await response.json();
 
       if (!response.ok) {
-        // Handle different error response formats
         let errorMessage = data.message || data.detail || 'An error occurred';
         
-        // If there are field-specific errors in details, format them
         if (data.details && typeof data.details === 'object') {
           const fieldErrors = Object.entries(data.details)
             .map(([key, value]) => {
@@ -163,28 +161,22 @@ class ApiClient {
     this.setAccessToken(null);
     if (typeof window !== 'undefined') {
       localStorage.removeItem('refresh_token');
-      localStorage.removeItem('soc2-intake-data');
+      localStorage.removeItem('soc2-roadmap');
       localStorage.removeItem('soc2-integrations');
+      localStorage.removeItem('soc2-completed-tasks');
     }
   }
 
   // Intake endpoints
   async submitIntake(intakeData: IntakeSubmission) {
-    return this.request<{
-      id: string;
-      company_id: string;
-      recommended_integrations: string[];
-      estimated_sprints: number;
-      estimated_controls: number;
-      created_at: string;
-    }>('/api/v1/intake/', {
+    return this.request<IntakeWithRoadmapResponse>('/api/v1/intake/', {
       method: 'POST',
       body: JSON.stringify(intakeData),
     });
   }
 
   async getIntake() {
-    return this.request<IntakeResponse>('/api/v1/intake/', {
+    return this.request<IntakeWithRoadmapResponse>('/api/v1/intake/', {
       method: 'GET',
     });
   }
@@ -318,64 +310,32 @@ class ApiClient {
 // Type definitions for API responses
 export interface IntakeSubmission {
   company_info: {
-    company_name: string;
     industry: string;
     employee_count: string;
-    year_founded: string;
     website: string;
   };
   technical_infrastructure: {
     cloud_providers: string[];
-    hosting_type: string;
     has_production_database: boolean;
     database_types: string[];
     uses_containers: boolean;
     has_ci_cd: boolean;
     source_code_management: string;
-    has_monitoring: boolean;
   };
   data_handling: {
     handles_customer_pii: boolean;
     handles_phi: boolean;
     handles_payment_data: boolean;
     data_residency_requirements: string[];
-    has_data_classification: boolean;
-    has_encryption_at_rest: boolean;
-    has_encryption_in_transit: boolean;
   };
-  security_posture: {
-    has_security_team: boolean;
-    security_team_size: string;
-    has_security_policies: boolean;
-    has_incident_response_plan: boolean;
-    has_vulnerability_management: boolean;
-    has_penetration_testing: boolean;
-    has_security_awareness: boolean;
+  security_and_org: {
+    security_responsible: string;
+    uses_contractors: boolean;
+    contractor_description: string;
     current_compliances: string[];
   };
-  access_control: {
-    has_sso: boolean;
-    sso_provider: string;
-    has_mfa: boolean;
-    mfa_coverage: string;
-    has_rbac: boolean;
-    has_privileged_access_management: boolean;
-    has_access_reviews: boolean;
-    access_review_frequency: string;
-  };
   vendor_management: {
-    critical_vendor_count: string;
-    has_vendor_assessment: boolean;
-    has_vendor_inventory: boolean;
-    has_data_processing_agreements: boolean;
-  };
-  business_continuity: {
-    has_backup_strategy: boolean;
-    backup_frequency: string;
-    has_disaster_recovery_plan: boolean;
-    has_bcp_testing: boolean;
-    rto_requirement: string;
-    rpo_requirement: string;
+    third_party_services: string;
   };
   target_completion_date: string | null;
   soc2_type: string;
@@ -387,6 +347,86 @@ export interface IntakeResponse extends IntakeSubmission {
   recommended_integrations: string[];
   created_at: string;
   updated_at: string;
+}
+
+// API Roadmap types (snake_case from backend)
+export interface ApiRoadmap {
+  maturity_score: number;
+  risk_level: 'low' | 'medium' | 'high' | 'critical';
+  recommended_timeline: number;
+  trust_service_criteria: string[];
+  sprints: Array<{
+    number: number;
+    name: string;
+    weeks: string;
+    focus: string;
+    tasks: Array<{
+      id: string;
+      title: string;
+      description: string;
+      category: string;
+      priority: string;
+      effort: string;
+      control_reference: string;
+      completed: boolean;
+      why: string;
+    }>;
+  }>;
+  gaps: Array<{
+    control: string;
+    current_state: string;
+    required_state: string;
+    severity: string;
+  }>;
+  policies: Array<{
+    id: string;
+    name: string;
+    exists: boolean;
+    required: boolean;
+    conditional?: string;
+  }>;
+  evidence: Array<{
+    id: string;
+    name: string;
+    description: string;
+    collection_method: string;
+    days_required: number;
+    already_have: boolean;
+    category: string;
+  }>;
+  risks: Array<{
+    id: string;
+    title: string;
+    description: string;
+    severity: string;
+    remediation: string;
+    sprint_reference?: number;
+  }>;
+  scope: {
+    type: string;
+    criteria: string[];
+    justification: string;
+    systems_in_scope: string[];
+    estimated_audit_cost: string;
+  };
+  score_breakdown: Array<{
+    category: string;
+    earned: number;
+    maximum: number;
+    controls: Array<{
+      name: string;
+      earned: number;
+      maximum: number;
+    }>;
+  }>;
+  generated_at: string;
+}
+
+export interface IntakeWithRoadmapResponse {
+  id: string;
+  company_id: string;
+  roadmap: ApiRoadmap;
+  created_at: string;
 }
 
 export interface IntegrationResponse {
@@ -470,64 +510,32 @@ export const api = new ApiClient(API_BASE_URL);
 // Helper to convert frontend intake format to API format
 export function convertIntakeToApiFormat(frontendData: {
   companyInfo: {
-    companyName: string;
     industry: string;
     employeeCount: string;
-    yearFounded: string;
-    website?: string;
+    website: string;
   };
   technicalInfrastructure: {
     cloudProviders: string[];
-    hostingType: string;
     hasProductionDatabase: boolean;
     databaseTypes: string[];
     usesContainers: boolean;
     hasCI_CD: boolean;
     sourceCodeManagement: string;
-    hasMonitoring: boolean;
   };
   dataHandling: {
     handlesCustomerPII: boolean;
     handlesPHI: boolean;
     handlesPaymentData: boolean;
     dataResidencyRequirements: string[];
-    hasDataClassification: boolean;
-    hasEncryptionAtRest: boolean;
-    hasEncryptionInTransit: boolean;
   };
-  securityPosture: {
-    hasSecurityTeam: boolean;
-    securityTeamSize: string;
-    hasSecurityPolicies: boolean;
-    hasIncidentResponsePlan: boolean;
-    hasVulnerabilityManagement: boolean;
-    hasPenetrationTesting: boolean;
-    hasSecurityAwareness: boolean;
+  securityAndOrg: {
+    securityResponsible: string;
+    usesContractors: boolean;
+    contractorDescription: string;
     currentCompliances: string[];
   };
-  accessControl: {
-    hasSSO: boolean;
-    ssoProvider: string;
-    hasMFA: boolean;
-    mfaCoverage: string;
-    hasRBAC: boolean;
-    hasPrivilegedAccessManagement: boolean;
-    hasAccessReviews: boolean;
-    accessReviewFrequency: string;
-  };
   vendorManagement: {
-    criticalVendorCount: string;
-    hasVendorAssessment: boolean;
-    hasVendorInventory: boolean;
-    hasDataProcessingAgreements: boolean;
-  };
-  businessContinuity: {
-    hasBackupStrategy: boolean;
-    backupFrequency: string;
-    hasDisasterRecoveryPlan: boolean;
-    hasBCPTesting: boolean;
-    rtoRequirement: string;
-    rpoRequirement: string;
+    thirdPartyServices: string;
   };
   targetCompletionDate: string;
   soc2Type: string;
@@ -535,67 +543,96 @@ export function convertIntakeToApiFormat(frontendData: {
 }): IntakeSubmission {
   return {
     company_info: {
-      company_name: frontendData.companyInfo.companyName,
       industry: frontendData.companyInfo.industry,
       employee_count: frontendData.companyInfo.employeeCount,
-      year_founded: frontendData.companyInfo.yearFounded,
-      website: frontendData.companyInfo.website ?? '',
+      website: frontendData.companyInfo.website,
     },
     technical_infrastructure: {
       cloud_providers: frontendData.technicalInfrastructure.cloudProviders,
-      hosting_type: frontendData.technicalInfrastructure.hostingType,
       has_production_database: frontendData.technicalInfrastructure.hasProductionDatabase,
       database_types: frontendData.technicalInfrastructure.databaseTypes,
       uses_containers: frontendData.technicalInfrastructure.usesContainers,
       has_ci_cd: frontendData.technicalInfrastructure.hasCI_CD,
       source_code_management: frontendData.technicalInfrastructure.sourceCodeManagement,
-      has_monitoring: frontendData.technicalInfrastructure.hasMonitoring,
     },
     data_handling: {
       handles_customer_pii: frontendData.dataHandling.handlesCustomerPII,
       handles_phi: frontendData.dataHandling.handlesPHI,
       handles_payment_data: frontendData.dataHandling.handlesPaymentData,
       data_residency_requirements: frontendData.dataHandling.dataResidencyRequirements,
-      has_data_classification: frontendData.dataHandling.hasDataClassification,
-      has_encryption_at_rest: frontendData.dataHandling.hasEncryptionAtRest,
-      has_encryption_in_transit: frontendData.dataHandling.hasEncryptionInTransit,
     },
-    security_posture: {
-      has_security_team: frontendData.securityPosture.hasSecurityTeam,
-      security_team_size: frontendData.securityPosture.securityTeamSize,
-      has_security_policies: frontendData.securityPosture.hasSecurityPolicies,
-      has_incident_response_plan: frontendData.securityPosture.hasIncidentResponsePlan,
-      has_vulnerability_management: frontendData.securityPosture.hasVulnerabilityManagement,
-      has_penetration_testing: frontendData.securityPosture.hasPenetrationTesting,
-      has_security_awareness: frontendData.securityPosture.hasSecurityAwareness,
-      current_compliances: frontendData.securityPosture.currentCompliances,
-    },
-    access_control: {
-      has_sso: frontendData.accessControl.hasSSO,
-      sso_provider: frontendData.accessControl.ssoProvider,
-      has_mfa: frontendData.accessControl.hasMFA,
-      mfa_coverage: frontendData.accessControl.mfaCoverage,
-      has_rbac: frontendData.accessControl.hasRBAC,
-      has_privileged_access_management: frontendData.accessControl.hasPrivilegedAccessManagement,
-      has_access_reviews: frontendData.accessControl.hasAccessReviews,
-      access_review_frequency: frontendData.accessControl.accessReviewFrequency,
+    security_and_org: {
+      security_responsible: frontendData.securityAndOrg.securityResponsible,
+      uses_contractors: frontendData.securityAndOrg.usesContractors,
+      contractor_description: frontendData.securityAndOrg.contractorDescription,
+      current_compliances: frontendData.securityAndOrg.currentCompliances,
     },
     vendor_management: {
-      critical_vendor_count: frontendData.vendorManagement.criticalVendorCount,
-      has_vendor_assessment: frontendData.vendorManagement.hasVendorAssessment,
-      has_vendor_inventory: frontendData.vendorManagement.hasVendorInventory,
-      has_data_processing_agreements: frontendData.vendorManagement.hasDataProcessingAgreements,
-    },
-    business_continuity: {
-      has_backup_strategy: frontendData.businessContinuity.hasBackupStrategy,
-      backup_frequency: frontendData.businessContinuity.backupFrequency,
-      has_disaster_recovery_plan: frontendData.businessContinuity.hasDisasterRecoveryPlan,
-      has_bcp_testing: frontendData.businessContinuity.hasBCPTesting,
-      rto_requirement: frontendData.businessContinuity.rtoRequirement,
-      rpo_requirement: frontendData.businessContinuity.rpoRequirement,
+      third_party_services: frontendData.vendorManagement.thirdPartyServices,
     },
     target_completion_date: frontendData.targetCompletionDate || null,
     soc2_type: frontendData.soc2Type,
     trust_service_criteria: frontendData.trustServiceCriteria,
+  };
+}
+
+// Helper to convert API roadmap (snake_case) to frontend format (camelCase)
+import type { ComplianceRoadmap } from '@/types/roadmap';
+
+export function convertApiRoadmapToFrontend(apiRoadmap: ApiRoadmap): ComplianceRoadmap {
+  return {
+    maturityScore: apiRoadmap.maturity_score,
+    riskLevel: apiRoadmap.risk_level,
+    recommendedTimeline: apiRoadmap.recommended_timeline,
+    sprints: apiRoadmap.sprints.map(sprint => ({
+      number: sprint.number,
+      name: sprint.name,
+      weeks: sprint.weeks,
+      focus: sprint.focus,
+      tasks: sprint.tasks.map(task => ({
+        id: task.id,
+        title: task.title,
+        description: task.description,
+        category: task.category as 'policy' | 'technical' | 'process' | 'evidence',
+        priority: task.priority as 'critical' | 'high' | 'medium' | 'low',
+        effort: task.effort as 'hours' | 'days' | 'weeks',
+        controlReference: task.control_reference,
+        completed: task.completed,
+        why: task.why,
+      })),
+    })),
+    gaps: apiRoadmap.gaps.map(gap => ({
+      control: gap.control,
+      currentState: gap.current_state,
+      requiredState: gap.required_state,
+      severity: gap.severity as 'low' | 'medium' | 'high' | 'critical',
+    })),
+    policies: apiRoadmap.policies,
+    evidence: apiRoadmap.evidence.map(ev => ({
+      id: ev.id,
+      name: ev.name,
+      description: ev.description,
+      collectionMethod: ev.collection_method,
+      daysRequired: ev.days_required,
+      alreadyHave: ev.already_have,
+      category: ev.category as 'access' | 'change' | 'monitoring' | 'training' | 'vendor' | 'backup' | 'policy',
+    })),
+    risks: apiRoadmap.risks.map(risk => ({
+      id: risk.id,
+      title: risk.title,
+      description: risk.description,
+      severity: risk.severity as 'low' | 'medium' | 'high' | 'critical',
+      remediation: risk.remediation,
+      sprintReference: risk.sprint_reference,
+    })),
+    scope: {
+      type: apiRoadmap.scope.type as 'type1' | 'type2',
+      criteria: apiRoadmap.scope.criteria,
+      justification: apiRoadmap.scope.justification,
+      systemsInScope: apiRoadmap.scope.systems_in_scope,
+      estimatedAuditCost: apiRoadmap.scope.estimated_audit_cost,
+    },
+    scoreBreakdown: apiRoadmap.score_breakdown,
+    generatedAt: apiRoadmap.generated_at,
   };
 }
