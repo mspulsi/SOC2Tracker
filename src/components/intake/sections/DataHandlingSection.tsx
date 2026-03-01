@@ -58,31 +58,6 @@ export default function DataHandlingSection({ data, onChange }: DataHandlingSect
         columns={2}
       />
 
-      <div className="space-y-4">
-        <h3 className="text-sm font-medium text-gray-700">Current Data Protection Measures</h3>
-
-        <Toggle
-          label="Data Classification Policy"
-          description="Do you have a formal system for classifying data sensitivity?"
-          checked={data.hasDataClassification}
-          onChange={(checked) => updateField('hasDataClassification', checked)}
-        />
-
-        <Toggle
-          label="Encryption at Rest"
-          description="Is stored data encrypted (databases, file storage, backups)?"
-          checked={data.hasEncryptionAtRest}
-          onChange={(checked) => updateField('hasEncryptionAtRest', checked)}
-        />
-
-        <Toggle
-          label="Encryption in Transit"
-          description="Is data encrypted during transmission (TLS/SSL)?"
-          checked={data.hasEncryptionInTransit}
-          onChange={(checked) => updateField('hasEncryptionInTransit', checked)}
-        />
-      </div>
-
       {(data.handlesPHI || data.handlesPaymentData) && (
         <InfoBox type="tip">
           Based on your data types, you may benefit from pursuing additional certifications

@@ -304,7 +304,7 @@ function SprintCalendar({
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function HomePage() {
   const router = useRouter();
-  const { intakeData, roadmap, loading, completedTasks } = useRoadmap();
+  const { roadmap, loading } = useRoadmap();
   const vendorSummary = useVendorSummary();
   const [showMaturityModal, setShowMaturityModal] = useState(false);
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
@@ -341,7 +341,7 @@ export default function HomePage() {
     );
   }
 
-  if (!intakeData || !roadmap) {
+  if (!roadmap) {
     return (
       <div className="flex items-center justify-center h-96">
         <div className="text-center">
@@ -359,16 +359,12 @@ export default function HomePage() {
   const scoreBarColor = roadmap.maturityScore < 30 ? 'bg-red-500' : roadmap.maturityScore < 50 ? 'bg-orange-500' : roadmap.maturityScore < 70 ? 'bg-yellow-500' : 'bg-green-500';
   const scoreTextColor = roadmap.maturityScore < 30 ? 'text-red-600' : roadmap.maturityScore < 50 ? 'text-orange-600' : roadmap.maturityScore < 70 ? 'text-yellow-600' : 'text-green-600';
 
-  const targetDate = intakeData.targetCompletionDate ? new Date(intakeData.targetCompletionDate) : null;
-  const today = new Date();
-  const daysRemaining = targetDate ? Math.ceil((targetDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)) : null;
-
   return (
     <div className="p-8">
       {/* Page heading */}
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Home</h1>
-        <p className="text-gray-500 text-sm mt-1">SOC 2 compliance snapshot for {intakeData.companyInfo.companyName}</p>
+        <p className="text-gray-500 text-sm mt-1">Your SOC 2 compliance snapshot</p>
       </div>
 
       {/* ── Compact metrics strip ──────────────────────────────────────────── */}
@@ -396,11 +392,11 @@ export default function HomePage() {
           </div>
         </button>
 
-        {/* Scope */}
-        <div className="flex-1 min-w-0 px-5 py-4">
-          <p className="text-[10px] text-gray-400 uppercase tracking-widest font-semibold mb-2">Scope</p>
-          <p className="text-xl font-bold text-gray-900 mb-1.5">
-            SOC 2 {intakeData.soc2Type === 'type1' ? 'Type 1' : 'Type 2'}
+        {/* SOC 2 Type & Scope */}
+        <div className="bg-white rounded-xl border border-gray-200 p-6">
+          <p className="text-xs text-gray-400 uppercase tracking-widest font-medium mb-4">Scope</p>
+          <p className="text-3xl font-bold text-gray-900 mb-1">
+            SOC 2 {roadmap.scope.type === 'type1' ? 'Type 1' : 'Type 2'}
           </p>
           <div className="flex flex-wrap gap-1">
             {roadmap.scope.criteria.map(c => (
@@ -421,28 +417,16 @@ export default function HomePage() {
           <p className="text-[11px] text-gray-400">{roadmap.sprints.length} sprints · to audit-ready</p>
         </div>
 
-        {/* Target Date */}
-        <div className="flex-1 min-w-0 px-5 py-4">
-          <p className="text-[10px] text-gray-400 uppercase tracking-widest font-semibold mb-2">Target Date</p>
-          {targetDate ? (
-            <>
-              <p className="text-xl font-bold text-gray-900 mb-1">
-                {targetDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-              </p>
-              <p className={`text-[11px] font-medium ${daysRemaining !== null && daysRemaining < 60 ? 'text-orange-600' : 'text-gray-400'}`}>
-                {daysRemaining !== null && daysRemaining > 0
-                  ? `${daysRemaining} days remaining`
-                  : daysRemaining !== null && daysRemaining <= 0
-                  ? 'Past target date'
-                  : ''}
-              </p>
-            </>
-          ) : (
-            <>
-              <p className="text-xl font-bold text-gray-400 mb-1">Not set</p>
-              <p className="text-[11px] text-gray-400">Set in your assessment</p>
-            </>
-          )}
+        {/* Sprints */}
+        <div className="bg-white rounded-xl border border-gray-200 p-6">
+          <p className="text-xs text-gray-400 uppercase tracking-widest font-medium mb-4">Sprints</p>
+          <p className="text-5xl font-bold text-gray-900 mb-1">{roadmap.sprints.length}</p>
+          <p className="text-sm text-gray-500 mb-4">2-week sprints planned</p>
+          <div className="mt-4 pt-4 border-t border-gray-100">
+            <p className="text-xs text-gray-400">
+              {roadmap.sprints.flatMap(s => s.tasks).length} total tasks
+            </p>
+          </div>
         </div>
 
         {/* Integration Scan */}

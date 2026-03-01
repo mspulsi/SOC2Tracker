@@ -5,7 +5,6 @@ import {
   CLOUD_PROVIDERS,
   DATABASE_TYPES,
   SOURCE_CODE_MANAGEMENT,
-  HOSTING_TYPES,
 } from '@/types/intake';
 import FormSection from '../FormSection';
 import { Select, CheckboxGroup, Toggle, InfoBox } from '../FormFields';
@@ -32,31 +31,9 @@ export default function TechnicalInfrastructureSection({
       description="Understanding your tech stack helps us identify which controls are relevant to your environment."
     >
       <InfoBox type="info">
-        SOC 2 controls vary based on your infrastructure. Cloud-hosted applications have
-        different requirements than on-premise systems.
+        SOC 2 controls vary based on your infrastructure. We&apos;ll automatically check your
+        monitoring and logging setup when you connect your integrations.
       </InfoBox>
-
-      <Select
-        label="Hosting Type"
-        options={HOSTING_TYPES}
-        value={data.hostingType}
-        onChange={(e) => updateField('hostingType', e.target.value)}
-        required
-      />
-
-      {(data.hostingType === 'Hybrid (cloud + on-premise)' || data.hostingType === 'Fully on-premise') && (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-4 flex gap-3">
-          <svg className="w-5 h-5 text-red-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
-          </svg>
-          <div>
-            <p className="text-sm font-semibold text-red-700">On-premise infrastructure not supported</p>
-            <p className="text-sm text-red-600 mt-0.5">
-              This tool is designed for cloud-hosted services. On-premise systems require a significantly different control set and scoping process that is outside the current scope of this tool.
-            </p>
-          </div>
-        </div>
-      )}
 
       <CheckboxGroup
         label="Cloud Providers"
@@ -98,13 +75,6 @@ export default function TechnicalInfrastructureSection({
           description="Do you have automated build and deployment pipelines?"
           checked={data.hasCI_CD}
           onChange={(checked) => updateField('hasCI_CD', checked)}
-        />
-
-        <Toggle
-          label="Monitoring & Logging"
-          description="Do you have centralized logging and monitoring in place?"
-          checked={data.hasMonitoring}
-          onChange={(checked) => updateField('hasMonitoring', checked)}
         />
       </div>
 

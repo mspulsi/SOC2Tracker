@@ -6,10 +6,8 @@ import ProgressBar from './ProgressBar';
 import CompanyInfoSection from './sections/CompanyInfoSection';
 import TechnicalInfrastructureSection from './sections/TechnicalInfrastructureSection';
 import DataHandlingSection from './sections/DataHandlingSection';
-import SecurityPostureSection from './sections/SecurityPostureSection';
-import AccessControlSection from './sections/AccessControlSection';
+import SecurityAndOrgSection from './sections/SecurityPostureSection';
 import VendorManagementSection from './sections/VendorManagementSection';
-import BusinessContinuitySection from './sections/BusinessContinuitySection';
 import ComplianceGoalsSection from './sections/ComplianceGoalsSection';
 
 const STEPS = [
@@ -17,79 +15,42 @@ const STEPS = [
   'Infrastructure',
   'Data',
   'Security',
-  'Access',
   'Vendors',
-  'Continuity',
   'Goals',
 ];
 
 const initialFormData: IntakeFormData = {
   companyInfo: {
-    companyName: '',
     industry: '',
     employeeCount: '',
-    yearFounded: '',
+    website: '',
   },
   technicalInfrastructure: {
     cloudProviders: [],
-    hostingType: '',
     hasProductionDatabase: false,
     databaseTypes: [],
     usesContainers: false,
     hasCI_CD: false,
     sourceCodeManagement: '',
-    hasMonitoring: false,
   },
   dataHandling: {
     handlesCustomerPII: false,
     handlesPHI: false,
     handlesPaymentData: false,
     dataResidencyRequirements: [],
-    hasDataClassification: false,
-    hasEncryptionAtRest: false,
-    hasEncryptionInTransit: false,
   },
-  securityPosture: {
-    hasSecurityTeam: false,
-    securityTeamSize: '',
-    hasSecurityPolicies: false,
-    hasIncidentResponsePlan: false,
-    hasVulnerabilityManagement: false,
-    hasPenetrationTesting: false,
-    hasSecurityAwareness: false,
+  securityAndOrg: {
+    securityResponsible: '',
+    usesContractors: false,
+    contractorDescription: '',
     currentCompliances: [],
   },
-  accessControl: {
-    hasSSO: false,
-    ssoProvider: '',
-    hasMFA: false,
-    mfaCoverage: '',
-    hasRBAC: false,
-    hasPrivilegedAccessManagement: false,
-    hasAccessReviews: false,
-    accessReviewFrequency: '',
-  },
   vendorManagement: {
-    criticalVendorCount: '',
-    hasVendorAssessment: false,
-    hasVendorInventory: false,
-    hasDataProcessingAgreements: false,
-    vendorList: [],
-  },
-  businessContinuity: {
-    hasBackupStrategy: false,
-    backupFrequency: '',
-    hasDisasterRecoveryPlan: false,
-    hasBCPTesting: false,
-    rtoRequirement: '',
-    rpoRequirement: '',
+    thirdPartyServices: '',
   },
   targetCompletionDate: '',
-  targetDateRange: undefined,
   soc2Type: 'type1',
-  soc2Stage: 'from-scratch',
   trustServiceCriteria: ['security'],
-  wantsSprintPlan: true,
 };
 
 interface IntakeFormProps {
@@ -100,14 +61,6 @@ export default function IntakeForm({ onComplete }: IntakeFormProps) {
   const [currentStep, setCurrentStep] = useState(0);
   const [formData, setFormData] = useState<IntakeFormData>(initialFormData);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const isStepBlocked = (): boolean => {
-    if (currentStep === 1) {
-      const h = formData.technicalInfrastructure.hostingType;
-      return h === 'Hybrid (cloud + on-premise)' || h === 'Fully on-premise';
-    }
-    return false;
-  };
 
   const handleNext = () => {
     if (currentStep < STEPS.length - 1) {
@@ -157,44 +110,24 @@ export default function IntakeForm({ onComplete }: IntakeFormProps) {
         );
       case 3:
         return (
-          <SecurityPostureSection
-            data={formData.securityPosture}
-            onChange={(securityPosture) => setFormData({ ...formData, securityPosture })}
+          <SecurityAndOrgSection
+            data={formData.securityAndOrg}
+            onChange={(securityAndOrg) => setFormData({ ...formData, securityAndOrg })}
           />
         );
       case 4:
-        return (
-          <AccessControlSection
-            data={formData.accessControl}
-            onChange={(accessControl) => setFormData({ ...formData, accessControl })}
-          />
-        );
-      case 5:
         return (
           <VendorManagementSection
             data={formData.vendorManagement}
             onChange={(vendorManagement) => setFormData({ ...formData, vendorManagement })}
           />
         );
-      case 6:
-        return (
-          <BusinessContinuitySection
-            data={formData.businessContinuity}
-            onChange={(businessContinuity) =>
-              setFormData({ ...formData, businessContinuity })
-            }
-          />
-        );
-      case 7:
+      case 5:
         return (
           <ComplianceGoalsSection
             data={{
               targetCompletionDate: formData.targetCompletionDate,
-              targetDateRange: formData.targetDateRange,
               soc2Type: formData.soc2Type,
-              soc2Stage: formData.soc2Stage,
-              trustServiceCriteria: formData.trustServiceCriteria,
-              wantsSprintPlan: formData.wantsSprintPlan,
             }}
             onChange={(goals) => setFormData({ ...formData, ...goals })}
           />
@@ -238,8 +171,7 @@ export default function IntakeForm({ onComplete }: IntakeFormProps) {
           <button
             type="button"
             onClick={handleNext}
-            disabled={isStepBlocked()}
-            className="px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-all shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-all shadow-sm hover:shadow-md"
           >
             <span className="flex items-center gap-2">
               Continue

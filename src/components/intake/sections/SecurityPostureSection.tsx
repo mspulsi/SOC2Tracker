@@ -1,83 +1,58 @@
 'use client';
 
-import { SecurityPosture, CURRENT_COMPLIANCES, SECURITY_TEAM_SIZES } from '@/types/intake';
+import { SecurityAndOrg, CURRENT_COMPLIANCES, SECURITY_RESPONSIBLE_OPTIONS } from '@/types/intake';
 import FormSection from '../FormSection';
-import { Select, Toggle, CheckboxGroup, InfoBox } from '../FormFields';
+import { Select, Toggle, CheckboxGroup, InfoBox, Input } from '../FormFields';
 
-interface SecurityPostureSectionProps {
-  data: SecurityPosture;
-  onChange: (data: SecurityPosture) => void;
+interface SecurityAndOrgSectionProps {
+  data: SecurityAndOrg;
+  onChange: (data: SecurityAndOrg) => void;
 }
 
-export default function SecurityPostureSection({ data, onChange }: SecurityPostureSectionProps) {
-  const updateField = <K extends keyof SecurityPosture>(
+export default function SecurityAndOrgSection({ data, onChange }: SecurityAndOrgSectionProps) {
+  const updateField = <K extends keyof SecurityAndOrg>(
     field: K,
-    value: SecurityPosture[K]
+    value: SecurityAndOrg[K]
   ) => {
     onChange({ ...data, [field]: value });
   };
 
   return (
     <FormSection
-      title="Current Security Posture"
-      description="Understanding your existing security measures helps us identify gaps and build on your strengths."
+      title="Security & Organizational Structure"
+      description="Understanding your team structure helps us tailor recommendations for your organization."
     >
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Toggle
-          label="Dedicated Security Team/Personnel"
-          description="Do you have staff focused on security?"
-          checked={data.hasSecurityTeam}
-          onChange={(checked) => updateField('hasSecurityTeam', checked)}
+      <Select
+        label="Who is responsible for security at your company?"
+        options={SECURITY_RESPONSIBLE_OPTIONS}
+        value={data.securityResponsible}
+        onChange={(e) => updateField('securityResponsible', e.target.value)}
+        required
+      />
+
+      {data.securityResponsible === 'No one assigned yet' && (
+        <InfoBox type="info">
+          No problem! One of the first steps in your compliance roadmap will be designating
+          a security owner. This doesn&apos;t need to be a full-time role.
+        </InfoBox>
+      )}
+
+      <Toggle
+        label="Contractors or External Developers"
+        description="Do you use contractors or external developers who have access to your systems or code?"
+        checked={data.usesContractors}
+        onChange={(checked) => updateField('usesContractors', checked)}
+      />
+
+      {data.usesContractors && (
+        <Input
+          label="Describe your contractor/external developer usage"
+          value={data.contractorDescription}
+          onChange={(e) => updateField('contractorDescription', e.target.value)}
+          placeholder="e.g., 2 offshore developers with code access, freelance designer with limited access"
+          helpText="This helps us understand access control requirements"
         />
-
-        {data.hasSecurityTeam && (
-          <Select
-            label="Security Team Size"
-            options={SECURITY_TEAM_SIZES}
-            value={data.securityTeamSize}
-            onChange={(e) => updateField('securityTeamSize', e.target.value)}
-          />
-        )}
-      </div>
-
-      <div className="space-y-4">
-        <h3 className="text-sm font-medium text-gray-700">Existing Security Measures</h3>
-
-        <Toggle
-          label="Security Policies"
-          description="Do you have documented security policies (acceptable use, data handling, etc.)?"
-          checked={data.hasSecurityPolicies}
-          onChange={(checked) => updateField('hasSecurityPolicies', checked)}
-        />
-
-        <Toggle
-          label="Incident Response Plan"
-          description="Do you have a documented plan for responding to security incidents?"
-          checked={data.hasIncidentResponsePlan}
-          onChange={(checked) => updateField('hasIncidentResponsePlan', checked)}
-        />
-
-        <Toggle
-          label="Vulnerability Management"
-          description="Do you regularly scan for and remediate vulnerabilities?"
-          checked={data.hasVulnerabilityManagement}
-          onChange={(checked) => updateField('hasVulnerabilityManagement', checked)}
-        />
-
-        <Toggle
-          label="Penetration Testing"
-          description="Have you conducted penetration testing in the past year?"
-          checked={data.hasPenetrationTesting}
-          onChange={(checked) => updateField('hasPenetrationTesting', checked)}
-        />
-
-        <Toggle
-          label="Security Awareness Training"
-          description="Do employees receive regular security training?"
-          checked={data.hasSecurityAwareness}
-          onChange={(checked) => updateField('hasSecurityAwareness', checked)}
-        />
-      </div>
+      )}
 
       <CheckboxGroup
         label="Current Compliance Certifications"
@@ -92,13 +67,6 @@ export default function SecurityPostureSection({ data, onChange }: SecurityPostu
         <InfoBox type="tip">
           Great! Your existing compliance work will accelerate your SOC 2 journey.
           Many controls overlap between frameworks.
-        </InfoBox>
-      )}
-
-      {!data.hasSecurityPolicies && (
-        <InfoBox type="info">
-          Don&apos;t worry if you don&apos;t have formal policies yet. Creating these will be
-          part of your compliance roadmap, and we&apos;ll provide templates to help.
         </InfoBox>
       )}
     </FormSection>

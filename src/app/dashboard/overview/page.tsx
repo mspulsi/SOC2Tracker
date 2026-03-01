@@ -15,12 +15,12 @@ function riskBadge(level: RiskLevel) {
 }
 
 export default function OverviewPage() {
-  const { intakeData, roadmap, loading, completedTasks } = useRoadmap();
+  const { roadmap, loading, completedTasks } = useRoadmap();
 
   if (loading) {
     return <div className="flex items-center justify-center h-96"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" /></div>;
   }
-  if (!intakeData || !roadmap) {
+  if (!roadmap) {
     return <div className="p-8 text-center text-gray-500">No assessment found. <Link href="/intake" className="text-blue-600 underline">Start assessment</Link></div>;
   }
 
@@ -47,7 +47,7 @@ export default function OverviewPage() {
           ))}
         </div>
         <div className="border-t border-gray-100 pt-4 flex flex-wrap gap-x-6 gap-y-2 text-xs text-gray-500">
-          <span><span className="font-medium text-gray-700">Type:</span> SOC 2 {intakeData.soc2Type === 'type1' ? 'Type 1' : 'Type 2'}</span>
+          <span><span className="font-medium text-gray-700">Type:</span> SOC 2 {roadmap.scope.type === 'type1' ? 'Type 1' : 'Type 2'}</span>
           <span><span className="font-medium text-gray-700">Est. audit cost:</span> {roadmap.scope.estimatedAuditCost}</span>
           <span><span className="font-medium text-gray-700">Systems in scope:</span> {roadmap.scope.systemsInScope.join(', ')}</span>
         </div>

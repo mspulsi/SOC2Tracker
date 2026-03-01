@@ -19,14 +19,6 @@ export default function CompanyInfoSection({ data, onChange }: CompanyInfoSectio
       title="Company Information"
       description="Tell us about your company so we can tailor your compliance roadmap."
     >
-      <Input
-        label="Company Name"
-        value={data.companyName}
-        onChange={(e) => updateField('companyName', e.target.value)}
-        placeholder="Acme Inc."
-        required
-      />
-
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Select
           label="Industry"
@@ -45,13 +37,12 @@ export default function CompanyInfoSection({ data, onChange }: CompanyInfoSectio
       </div>
 
       <Input
-        label="Year Founded"
-        type="number"
-        min="1900"
-        max={new Date().getFullYear()}
-        value={data.yearFounded}
-        onChange={(e) => updateField('yearFounded', e.target.value)}
-        placeholder="2020"
+        label="Website"
+        type="url"
+        value={data.website}
+        onChange={(e) => updateField('website', e.target.value)}
+        placeholder="https://example.com"
+        helpText="We'll use this to verify your website security configuration"
       />
     </FormSection>
   );
