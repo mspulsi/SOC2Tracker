@@ -21,14 +21,66 @@ const CATEGORY_ICON: Record<Task['category'], string> = {
   evidence: '📋',
 };
 
+// ─── Date helpers (shared with home calendar) ─────────────────────────────────
+function parseLocalDate(s: string): Date {
+  const [y, m, d] = s.split('-').map(Number);
+  return new Date(y, m - 1, d);
+}
+
+function addDays(date: Date, n: number): Date {
+  const d = new Date(date);
+  d.setDate(d.getDate() + n);
+  return d;
+}
+
+function parseSprintWeeks(weeks: string): { start: number; end: number } | null {
+  const m = weeks.match(/(\d+)\s*[–\-]\s*(\d+)/);
+  if (m) return { start: +m[1], end: +m[2] };
+  const s = weeks.match(/(\d+)/);
+  if (s) { const n = +s[1]; return { start: n, end: n }; }
+  return null;
+}
+
+function getSprintRange(sprint: Sprint, planStart: Date) {
+  const w = parseSprintWeeks(sprint.weeks);
+  if (!w) return null;
+  return { start: addDays(planStart, (w.start - 1) * 7), end: addDays(planStart, w.end * 7 - 1) };
+}
+
+function fmtDate(d: Date) {
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+function enableSprintPlan() {
+  const stored = localStorage.getItem('soc2-intake-data');
+  if (!stored) return;
+  const data = JSON.parse(stored);
+  data.wantsSprintPlan = true;
+  localStorage.setItem('soc2-intake-data', JSON.stringify(data));
+  window.location.reload();
+}
+
 export default function SprintsPage() {
   const { roadmap, loading, completedTasks, toggleTask } = useRoadmap();
   const [overrides, setOverrides] = useState<SprintOverrides>({});
+  const [planStartDate, setPlanStartDate] = useState('');
 
   useEffect(() => {
     const stored = localStorage.getItem('soc2-sprint-overrides');
     if (stored) setOverrides(JSON.parse(stored));
+    const planStart = localStorage.getItem('soc2-sprint-plan-start');
+    if (planStart) setPlanStartDate(planStart);
   }, []);
+
+  function handleSetPlanStart(date: string) {
+    setPlanStartDate(date);
+    if (date) {
+      localStorage.setItem('soc2-sprint-plan-start', date);
+    } else {
+      localStorage.removeItem('soc2-sprint-plan-start');
+    }
+  }
 
   function moveTask(taskId: string, toSprint: number) {
     const next = { ...overrides, [taskId]: toSprint };
@@ -81,7 +133,6 @@ export default function SprintsPage() {
     s.tasks.map(t => ({ ...t, originalSprint: s.number }))
   );
 
-  // Build effective sprint map
   const sprintMap: Map<number, TaskWithSprint[]> = new Map(
     roadmap.sprints.map(s => [s.number, []])
   );
@@ -100,7 +151,8 @@ export default function SprintsPage() {
 
   return (
     <div className="p-8">
-      <div className="mb-8 flex items-start justify-between">
+      {/* Page header */}
+      <div className="mb-6 flex items-start justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Sprints</h1>
           <p className="text-gray-500 text-sm mt-1">
@@ -121,6 +173,33 @@ export default function SprintsPage() {
         )}
       </div>
 
+      {/* ── Sprint plan start date ─────────────────────────────────────────── */}
+      <div className="bg-white rounded-xl border border-gray-200 px-5 py-4 mb-6 flex items-center gap-4">
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold text-gray-700">Sprint Plan Start Date</p>
+          <p className="text-xs text-gray-400 mt-0.5">
+            Anchors all sprints to real calendar dates — shown on the Home calendar.
+          </p>
+        </div>
+        <div className="flex items-center gap-3 shrink-0">
+          <input
+            type="date"
+            value={planStartDate}
+            onChange={e => handleSetPlanStart(e.target.value)}
+            className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          {planStartDate && (
+            <button
+              onClick={() => handleSetPlanStart('')}
+              className="text-xs text-gray-400 hover:text-red-500 transition-colors"
+            >
+              Clear
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* ── Sprint cards ───────────────────────────────────────────────────── */}
       <div className="space-y-6">
         {sprintNumbers.map(num => {
           const tasks = sprintMap.get(num) ?? [];
@@ -128,12 +207,17 @@ export default function SprintsPage() {
           const done = tasks.filter(t => completedTasks.has(t.id)).length;
           const pct = tasks.length ? Math.round((done / tasks.length) * 100) : 0;
 
+          // Calculate date range if plan start is set
+          const dateRange = planStartDate && meta
+            ? getSprintRange(meta, parseLocalDate(planStartDate))
+            : null;
+
           return (
             <div key={num} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
               {/* Sprint header */}
               <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-4">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Sprint {num}</span>
                     {meta && (
                       <>
@@ -141,6 +225,14 @@ export default function SprintsPage() {
                         <span className="text-xs text-gray-500">{meta.weeks}</span>
                         <span className="text-xs text-gray-300">·</span>
                         <span className="text-sm font-semibold text-gray-700">{meta.name}</span>
+                      </>
+                    )}
+                    {dateRange && (
+                      <>
+                        <span className="text-xs text-gray-300">·</span>
+                        <span className="text-xs font-medium px-2 py-0.5 bg-blue-50 text-blue-600 rounded-full">
+                          {fmtDate(dateRange.start)} – {fmtDate(dateRange.end)}
+                        </span>
                       </>
                     )}
                   </div>
@@ -164,19 +256,19 @@ export default function SprintsPage() {
               ) : (
                 <ul className="divide-y divide-gray-50">
                   {tasks.map(task => {
-                    const done = completedTasks.has(task.id);
+                    const isDone = completedTasks.has(task.id);
                     const movedFrom = overrides[task.id] !== undefined && overrides[task.id] !== task.originalSprint;
 
                     return (
-                      <li key={task.id} className={`px-5 py-3.5 flex items-center gap-3 ${done ? 'bg-gray-50' : ''}`}>
+                      <li key={task.id} className={`px-5 py-3.5 flex items-center gap-3 ${isDone ? 'bg-gray-50' : ''}`}>
                         {/* Checkbox */}
                         <button
                           onClick={() => toggleTask(task.id)}
                           className={`w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${
-                            done ? 'bg-green-600 border-green-600' : 'border-gray-300 hover:border-blue-500'
+                            isDone ? 'bg-green-600 border-green-600' : 'border-gray-300 hover:border-blue-500'
                           }`}
                         >
-                          {done && (
+                          {isDone && (
                             <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                               <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                             </svg>
@@ -188,7 +280,7 @@ export default function SprintsPage() {
 
                         {/* Title */}
                         <div className="flex-1 min-w-0">
-                          <p className={`text-sm font-medium truncate ${done ? 'line-through text-gray-400' : 'text-gray-800'}`}>
+                          <p className={`text-sm font-medium truncate ${isDone ? 'line-through text-gray-400' : 'text-gray-800'}`}>
                             {task.title}
                           </p>
                           <div className="flex items-center gap-2 mt-0.5">
