@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRoadmap } from '@/lib/use-roadmap';
-import { autoPopulateVendors, getNextReviewDate, getKnownVendorInfo } from '@/lib/vendor-engine';
+import { getNextReviewDate, getKnownVendorInfo } from '@/lib/vendor-engine';
 import { Vendor, VendorRiskTier, AssessmentStatus } from '@/types/vendor';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -295,7 +295,7 @@ function VendorDetail({ vendor, handlesPHI, onUpdate, onClose }: {
 // ─── Main Vendors Page ────────────────────────────────────────────────────────
 
 export default function VendorsPage() {
-  const { intakeData, loading } = useRoadmap();
+  const { roadmap, loading } = useRoadmap();
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [showConfirmBanner, setShowConfirmBanner] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -305,18 +305,18 @@ export default function VendorsPage() {
     const existing = loadVendors();
     if (existing) {
       setVendors(existing);
-      setInitialized(true);
-    } else if (intakeData) {
-      const auto = autoPopulateVendors(intakeData);
-      setVendors(auto);
-      saveVendors(auto);
-      setShowConfirmBanner(true);
-      setInitialized(true);
     }
-  }, [intakeData]);
+    setInitialized(true);
+  }, []);
 
   function updateVendor(updated: Vendor) {
     const next = vendors.map(v => v.id === updated.id ? updated : v);
+    setVendors(next);
+    saveVendors(next);
+  }
+
+  function addVendor(vendor: Vendor) {
+    const next = [...vendors, vendor];
     setVendors(next);
     saveVendors(next);
   }
@@ -325,7 +325,7 @@ export default function VendorsPage() {
     return <div className="flex items-center justify-center h-96"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" /></div>;
   }
 
-  if (!intakeData) {
+  if (!roadmap) {
     return (
       <div className="p-8 text-center text-gray-500">
         No assessment found. <Link href="/intake" className="text-blue-600 underline">Start assessment</Link>
@@ -334,7 +334,7 @@ export default function VendorsPage() {
   }
 
   const selected = vendors.find(v => v.id === selectedId) ?? null;
-  const handlesPHI = intakeData.dataHandling.handlesPHI;
+  const handlesPHI = roadmap.scope.criteria.includes('privacy');
 
   // Sort: not-started critical first, then by tier, then name
   const sorted = [...vendors].sort((a, b) => {

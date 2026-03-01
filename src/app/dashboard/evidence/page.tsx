@@ -18,13 +18,13 @@ const CATEGORY_LABELS: Record<EvidenceItem['category'], string> = {
 };
 
 export default function EvidencePage() {
-  const { intakeData, roadmap, loading } = useRoadmap();
+  const { roadmap, loading } = useRoadmap();
   const [activeCategory, setActiveCategory] = useState<Category>('all');
 
   if (loading) {
     return <div className="flex items-center justify-center h-96"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" /></div>;
   }
-  if (!intakeData || !roadmap) {
+  if (!roadmap) {
     return <div className="p-8 text-center text-gray-500">No assessment found. <Link href="/intake" className="text-blue-600 underline">Start assessment</Link></div>;
   }
 
@@ -44,7 +44,7 @@ export default function EvidencePage() {
         <h1 className="text-2xl font-bold text-gray-900">Evidence</h1>
         <p className="text-gray-500 text-sm mt-1">
           {roadmap.evidence.filter(e => e.alreadyHave).length} of {roadmap.evidence.length} items already being collected
-          {intakeData.soc2Type === 'type2' && (
+          {roadmap.scope.type === 'type2' && (
             <span className="ml-2 text-xs font-medium text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
               Type 2: 90-day windows must start now
             </span>

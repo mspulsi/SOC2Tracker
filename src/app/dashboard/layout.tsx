@@ -82,7 +82,7 @@ const NAV_ITEMS = [
 
 function Sidebar() {
   const pathname = usePathname();
-  const { intakeData, roadmap } = useRoadmap();
+  const { roadmap } = useRoadmap();
 
   return (
     <aside className="fixed left-0 top-16 bottom-0 w-60 bg-white border-r border-gray-200 flex flex-col z-10">
@@ -107,12 +107,11 @@ function Sidebar() {
       </nav>
 
       {/* Bottom info */}
-      {intakeData && roadmap && (
+      {roadmap && (
         <div className="px-4 py-4 border-t border-gray-100">
-          <p className="text-xs font-semibold text-gray-800 truncate">{intakeData.companyInfo.companyName}</p>
-          <div className="flex items-center gap-2 mt-1">
+          <div className="flex items-center gap-2">
             <span className="text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full font-medium">
-              SOC 2 {intakeData.soc2Type === 'type1' ? 'Type 1' : 'Type 2'}
+              SOC 2 {roadmap.scope.type === 'type1' ? 'Type 1' : 'Type 2'}
             </span>
             <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
               roadmap.riskLevel === 'critical' ? 'bg-red-100 text-red-700' :
@@ -130,9 +129,6 @@ function Sidebar() {
 }
 
 function Header() {
-  const { intakeData } = useRoadmap();
-  const initial = intakeData?.companyInfo.companyName?.[0]?.toUpperCase() ?? '?';
-
   return (
     <header className="fixed top-0 left-0 right-0 h-16 bg-white border-b border-gray-200 z-20 flex items-center justify-between px-6">
       {/* Logo */}
@@ -155,11 +151,10 @@ function Header() {
           </svg>
         </Link>
 
-        <div
-          className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white text-sm font-semibold"
-          title={intakeData?.companyInfo.companyName}
-        >
-          {initial}
+        <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white text-sm font-semibold">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+          </svg>
         </div>
       </div>
     </header>

@@ -1,12 +1,9 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { IntakeFormData } from '@/types/intake';
 import { ComplianceRoadmap } from '@/types/roadmap';
-import { generateRoadmap } from '@/lib/compliance-engine';
 
 interface UseRoadmapReturn {
-  intakeData: IntakeFormData | null;
   roadmap: ComplianceRoadmap | null;
   loading: boolean;
   completedTasks: Set<string>;
@@ -14,17 +11,15 @@ interface UseRoadmapReturn {
 }
 
 export function useRoadmap(): UseRoadmapReturn {
-  const [intakeData, setIntakeData] = useState<IntakeFormData | null>(null);
   const [roadmap, setRoadmap] = useState<ComplianceRoadmap | null>(null);
   const [loading, setLoading] = useState(true);
   const [completedTasks, setCompletedTasks] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    const stored = localStorage.getItem('soc2-intake-data');
+    const stored = localStorage.getItem('soc2-roadmap');
     if (stored) {
-      const data: IntakeFormData = JSON.parse(stored);
-      setIntakeData(data);
-      setRoadmap(generateRoadmap(data));
+      const data: ComplianceRoadmap = JSON.parse(stored);
+      setRoadmap(data);
     }
     const done = localStorage.getItem('soc2-completed-tasks');
     if (done) {
@@ -42,5 +37,5 @@ export function useRoadmap(): UseRoadmapReturn {
     });
   }, []);
 
-  return { intakeData, roadmap, loading, completedTasks, toggleTask };
+  return { roadmap, loading, completedTasks, toggleTask };
 }
