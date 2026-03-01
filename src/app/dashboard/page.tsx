@@ -304,7 +304,7 @@ function SprintCalendar({
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function HomePage() {
   const router = useRouter();
-  const { roadmap, loading } = useRoadmap();
+  const { roadmap, loading, completedTasks } = useRoadmap();
   const vendorSummary = useVendorSummary();
   const [showMaturityModal, setShowMaturityModal] = useState(false);
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
